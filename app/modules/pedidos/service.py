@@ -11,9 +11,9 @@ from app.modules.forma_pago.models import FormaPago
 
 TRANSICIONES_VALIDAS = {
     "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
-    "CONFIRMADO": ["EN_PREP", "CANCELADO"],
-    "EN_PREP":    ["EN_CAMINO"],
-    "EN_CAMINO":  ["ENTREGADO"],
+    "CONFIRMADO": ["EN_PREP", "PENDIENTE", "CANCELADO"],
+    "EN_PREP":    ["EN_CAMINO", "CONFIRMADO", "CANCELADO"],
+    "EN_CAMINO":  ["ENTREGADO", "EN_PREP", "CANCELADO"],
     "ENTREGADO":  [],
     "CANCELADO":  [],
 }
@@ -76,6 +76,7 @@ class PedidoService:
                     raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
                 if producto.stock_cantidad < item.cantidad:
                     raise HTTPException(400, f"Stock insuficiente para {producto.nombre}")
+                producto.stock_cantidad -= item.cantidad
                 precio_snap = producto.precio_base
                 subtotal_item = precio_snap * item.cantidad
                 subtotal += subtotal_item
@@ -165,6 +166,12 @@ class PedidoService:
 
             if estado_destino == "CANCELADO" and not data.motivo:
                 raise HTTPException(400, "Motivo obligatorio para cancelar un pedido")
+            
+            if estado_destino == "CANCELADO":
+                for detalle in pedido.detalles:
+                    producto = uow.pedidos.session.get(Producto, detalle.producto_id)
+                    if producto:
+                        producto.stock_cantidad += detalle.cantidad
 
             pedido.estado_codigo = estado_destino
             historial = HistorialEstadoPedido(

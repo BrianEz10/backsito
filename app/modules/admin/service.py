@@ -28,7 +28,6 @@ class AdminService:
     
     def listar(self, offset: int = 0, limit: int = 20, rol: str | None = None) -> list[AdminUserOut]:
         with UnitOfWork(self._session) as uow:
-            repo = UsuarioRepository(uow._session)
             stmt = select(Usuario).where(Usuario.deleted_at == None)
             if rol:
                 stmt = stmt.join(UsuarioRol, UsuarioRol.usuario_id == Usuario.id)

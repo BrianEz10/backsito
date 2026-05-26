@@ -18,7 +18,6 @@ class Producto(Base, table=True):
     stock_cantidad: int = Field(default=0)
     disponible: bool = Field(default=True)
     unidad_venta_id: int | None = Field(default=None, foreign_key="unidad_medida.id")
-    #Verificar "Agregar la importación de UnidadMedida en los TYPE_CHECKING (opcional, no es obligatorio porque no hay Relationship directa)."
     
     categorias: list["Categoria"] = Relationship(
         back_populates="productos", link_model=ProductoCategoria
