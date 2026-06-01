@@ -19,10 +19,10 @@ TRANSICIONES_VALIDAS = {
 }
 
 ROLES_ADMIN_PEDIDOS = ["ADMIN", "PEDIDOS"]
-
+ROLES_SIN_DIRECCION = ["ADMIN", "CAJERO"]  
 COSTO_ENVIO = 50.00
 
-
+    
 class PedidoService:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -66,7 +66,7 @@ class PedidoService:
             ) for h in pedido.historial],
         )
     
-    def create(self, data: PedidoCreate, usuario_id: int) -> PedidoOut:
+    def create(self, data: PedidoCreate, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             subtotal = 0.0
             detalles = []
@@ -94,12 +94,17 @@ class PedidoService:
             fp = uow.pedidos.session.get(FormaPago, data.forma_pago_codigo)
             if not fp:
                 raise HTTPException(400, f"Forma de pago '{data.forma_pago_codigo}' no existe")
+            puede_sin_direccion = any(r in ROLES_SIN_DIRECCION for r in roles)
+            if data.direccion_id is not None:
+                dir_entrega = uow.pedidos.session.get(DireccionEntrega, data.direccion_id)
+                if not dir_entrega or dir_entrega.usuario_id != usuario_id:
+                    raise HTTPException(400, "Dirección de entrega no válida")
+            elif not puede_sin_direccion:
+                raise HTTPException(400, "Dirección de entrega requerida para este usuario")
+            
 
-            dir_entrega = uow.pedidos.session.get(DireccionEntrega, data.direccion_id)
-            if not dir_entrega or dir_entrega.usuario_id != usuario_id:
-                raise HTTPException(400, "Dirección de entrega no válida")
-
-            total = subtotal + COSTO_ENVIO
+            costo_envio = 0 if data.direccion_id is None else COSTO_ENVIO
+            total = subtotal + costo_envio
             pedido = Pedido(
                 usuario_id=usuario_id,
                 direccion_id=data.direccion_id,
@@ -107,7 +112,7 @@ class PedidoService:
                 forma_pago_codigo=data.forma_pago_codigo,
                 subtotal=subtotal,
                 descuento=0.00,
-                costo_envio=COSTO_ENVIO,
+                costo_envio=costo_envio,
                 total=total,
                 notas=data.notas,
             )
