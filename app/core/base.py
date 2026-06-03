@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import DateTime
+from sqlmodel import SQLModel, Field
 
 class Base(SQLModel):
     id: int | None = Field(default=None, primary_key=True)

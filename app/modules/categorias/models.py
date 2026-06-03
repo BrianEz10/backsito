@@ -3,7 +3,6 @@ from app.core.base import Base
 from app.modules.productos.associations import ProductoCategoria
 from typing import TYPE_CHECKING #Para que no rompa los el Pylance
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.modules.productos.models import Producto
 
@@ -20,7 +19,7 @@ class Categoria(Base, table = True):
         sa_relationship_kwargs={
             "remote_side": "Categoria.id",
             "lazy": "select",
-        },
+        }
     )
     hijos: list["Categoria"] = Relationship(
         back_populates="parent",

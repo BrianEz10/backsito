@@ -4,6 +4,8 @@ import hashlib
 from app.modules.auth.refresh_models import RefreshToken
 from app.modules.auth.refresh_repository import RefreshTokenRepository
 
+#RefreshTokenService existe pero está huérfano(pegarle un perma),  cambiar manga de giles.
+
 class RefreshTokenService:
     def __init__(self, repo: RefreshTokenRepository):
         self.repo = repo

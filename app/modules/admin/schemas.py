@@ -18,3 +18,5 @@ class AdminUserUpdate(SQLModel):
 
 class AdminAsignarRolesRequest(SQLModel):
     roles: list[str]
+
+# Admin reusa entidades de auth/roles; falta AdminUnitOfWork.

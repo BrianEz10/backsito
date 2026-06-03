@@ -11,6 +11,10 @@ from app.modules.roles.associations import UsuarioRol
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.config import settings
 
+
+#Este AuthService(rehacer) duplica su lógica, cambiar manga de giles.
+
+
 class AuthService:
     def __init__(self, session: Session) -> None:
         self._session = session
