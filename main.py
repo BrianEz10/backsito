@@ -8,15 +8,12 @@ from app.modules.auth.router import router as auth_router
 from app.modules.categorias.router import router as categorias_router
 from app.modules.ingredientes.router import router as ingredientes_router
 from app.modules.productos.router import router as productos_router
-from app.modules.roles.router import router as roles_router
 from app.core.database import Session
 from app.db.seed import seed_admin_test, seed_estados_pedido, seed_formas_pago, seed_roles, seed_unidades_medida
 from app.modules.direcciones.router import router as direcciones_router
-from app.modules.unidad_medida.router import router as unidad_medida_router
-from app.modules.estado_pedido.router import router as estado_pedido_router
-from app.modules.forma_pago.router import router as forma_pago_router
 from app.modules.pedidos.router import router as pedidos_router
 from app.modules.admin.router import router as admin_router
+from app.core.catalog_endpoints import router as catalogos_router
 
 
 @asynccontextmanager
@@ -45,10 +42,7 @@ app.include_router(auth_router)
 app.include_router(categorias_router)
 app.include_router(ingredientes_router)
 app.include_router(productos_router)
-app.include_router(roles_router)
 app.include_router(direcciones_router)
-app.include_router(unidad_medida_router)
-app.include_router(estado_pedido_router)
-app.include_router(forma_pago_router)
 app.include_router(pedidos_router)
 app.include_router(admin_router)
+app.include_router(catalogos_router)

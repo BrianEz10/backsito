@@ -6,9 +6,7 @@ from app.core.database import SessionDep
 from app.modules.auth.models import Usuario
 from app.core.security import decode_access_token
 
-async def get_current_user(
-        request: Request, session: SessionDep
-) -> Usuario:
+async def get_current_user(request: Request, session: SessionDep) -> Usuario:
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(
@@ -37,17 +35,13 @@ async def get_current_user(
 
 CurrentUser = Annotated[Usuario, Depends(get_current_user)]
 
-async def get_current_active_user(
-    current_user: CurrentUser,
-) -> Usuario:
+async def get_current_active_user(current_user: CurrentUser) -> Usuario:
     if current_user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cuenta de usuario desactivada")
     return current_user
 
 def require_role(allowed_roles: list[str]):
-    async def role_checker(
-            current_user: Annotated[Usuario, Depends(get_current_active_user)],
-    ) -> Usuario:
+    async def role_checker(current_user: Annotated[Usuario, Depends(get_current_active_user)]) -> Usuario:
         user_roles = [rol.codigo for rol in current_user.roles]
         if not any(rol in allowed_roles for rol in user_roles):
             raise HTTPException(

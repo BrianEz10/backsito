@@ -4,7 +4,6 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from app.core.uow import UnitOfWork
 from app.modules.auth.models import Usuario
-from app.modules.auth.repository import UsuarioRepository
 from app.modules.roles.associations import UsuarioRol
 from app.modules.roles.models import Rol
 from app.modules.admin.schemas import AdminUserOut, AdminUserUpdate, AdminAsignarRolesRequest
