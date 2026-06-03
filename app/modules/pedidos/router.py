@@ -14,7 +14,8 @@ def get_pedido_service(session: SessionDep) -> PedidoService:
 
 @router.post("/", response_model=PedidoOut, status_code=status.HTTP_201_CREATED)
 def crear(data: PedidoCreate, current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
-    return svc.create(data, current_user.id)
+    roles = [rol.codigo for rol in current_user.roles]
+    return svc.create(data, current_user.id, roles)
 
 
 @router.get("/", response_model=list[PedidoOut])
