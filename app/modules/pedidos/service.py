@@ -11,9 +11,8 @@ from app.modules.forma_pago.models import FormaPago
 
 TRANSICIONES_VALIDAS = {
     "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
-    "CONFIRMADO": ["EN_PREP", "PENDIENTE", "CANCELADO"],
-    "EN_PREP":    ["EN_CAMINO", "CONFIRMADO", "CANCELADO"],
-    "EN_CAMINO":  ["ENTREGADO", "EN_PREP", "CANCELADO"],
+    "CONFIRMADO": ["EN_PREP", "CANCELADO"],
+    "EN_PREP":    ["ENTREGADO", "CANCELADO"],
     "ENTREGADO":  [],
     "CANCELADO":  [],
 }
@@ -25,7 +24,6 @@ COSTO_ENVIO = 50.00
 EVENTOS_WS = {
     "CONFIRMADO": "PEDIDO_CONFIRMADO",
     "EN_PREP": "PEDIDO_EN_PREPARACION",
-    "EN_CAMINO": "PEDIDO_EN_CAMINO",
     "ENTREGADO": "PEDIDO_ENTREGADO",
     "CANCELADO": "PEDIDO_CANCELADO",
 }
@@ -166,6 +164,7 @@ class PedidoService:
             pedido = self._get_or_404(uow, pedido_id)
             estado_actual = pedido.estado_codigo
             estado_destino = data.estado_hacia
+
             if estado_destino not in TRANSICIONES_VALIDAS.get(estado_actual, []):
                 raise HTTPException(400, f"No se puede pasar de {estado_actual} a {estado_destino}")
 
@@ -178,7 +177,7 @@ class PedidoService:
 
             if estado_destino == "CANCELADO" and not data.motivo:
                 raise HTTPException(400, "Motivo obligatorio para cancelar un pedido")
-            
+
             if estado_destino == "CANCELADO":
                 for detalle in pedido.detalles:
                     producto = uow.pedidos.session.get(Producto, detalle.producto_id)
@@ -195,10 +194,16 @@ class PedidoService:
             )
             uow.pedidos.session.add(historial)
             result = self._pedido_to_out(pedido)
-            event_type = EVENTOS_WS.get(estado_destino)
-            if event_type:
-                from app.core.websocket_manager import manager
-                await manager.broadcast(event_type, result.model_dump())
+
+            # ========== ACÁ TERMINA EL UoW → COMMIT OCURRIÓ ==========
+            # RN-06: broadcast SIEMPRE después del commit, NUNCA dentro del bloque
+
+        from app.core.websocket_manager import manager
+
+        event_type = EVENTOS_WS.get(estado_destino)
+        if event_type:
+            await manager.broadcast(event_type, result.model_dump())
+
         return result
 
     def delete(self, pedido_id: int) -> None:

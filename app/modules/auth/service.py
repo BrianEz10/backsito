@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, Response
 from sqlmodel import Session
 from app.modules.auth.models import Usuario
-from app.modules.auth.schemas import UserCreate
+from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
 from app.modules.auth.uow import AuthUnitOfWork
 from app.modules.auth.refresh_models import RefreshToken
 from app.modules.roles.associations import UsuarioRol
@@ -18,7 +18,7 @@ from app.core.config import settings
 class AuthService:
     def __init__(self, session: Session) -> None:
         self._session = session
-        self._refresh_expire_days = 7
+        self._refresh_expire_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
     def _utcnow(self) -> datetime:
         return datetime.now(timezone.utc).replace(tzinfo=None) 
@@ -53,7 +53,7 @@ class AuthService:
         roles = [rol.codigo for rol in user.roles]
         return create_access_token({"sub": user.email, "roles": roles})
     
-    def register(self, data: UserCreate, response: Response) -> dict:
+    def register(self, data: RegisterRequest, response: Response) -> dict:
         with AuthUnitOfWork(self._session) as uow:
             existing = uow.usuarios.get_by_email(data.email)
             if existing:
@@ -72,17 +72,27 @@ class AuthService:
             refresh_token_str = self._create_refresh_token(uow, user.id)
             access_token = self.create_token(user)
         self._set_auth_cookies(response, access_token, refresh_token_str)
-        return {"access_token": access_token, "token_type": "bearer"}
+        expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token_str,
+            expires_in=expires_in,
+        )
     
-    def login(self, form_data, response: Response) -> dict:
+    def login(self, data: LoginRequest, response: Response) -> dict:
         with AuthUnitOfWork(self._session) as uow:
-            user = uow.usuarios.get_by_email(form_data.username)
-            if not user or not verify_password(form_data.password, user.hashed_password):
+            user = uow.usuarios.get_by_email(data.email)
+            if not user or not verify_password(data.password, user.hashed_password):
                 raise HTTPException(401, "Credenciales invalidas")
             refresh_token_str = self._create_refresh_token(uow, user.id)
             access_token = self.create_token(user)
         self._set_auth_cookies(response, access_token, refresh_token_str)
-        return {"access_token": access_token, "token_type": "bearer"}
+        expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token_str,
+            expires_in=expires_in,
+        )
     
     def refresh(self, refresh_token_str: str, response: Response) -> dict:
         with AuthUnitOfWork(self._session) as uow:
@@ -96,9 +106,14 @@ class AuthService:
             user = uow.usuarios.get_by_id(token.usuario_id)
             access_token = self.create_token(user)
         self._set_auth_cookies(response, access_token, new_refresh_str)
-        return {"access_token": access_token, "token_type": "bearer"}
+        expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token_str,
+            expires_in=expires_in,
+        )
     
-    def logout(self, refresh_token_str: str, response: Response) -> dict:
+    def logout(self, refresh_token_str: str, response: Response) -> None:
         if refresh_token_str:
             with AuthUnitOfWork(self._session) as uow:
                 token_hash = self._hash_token(refresh_token_str)
@@ -107,4 +122,3 @@ class AuthService:
                     token.revoked_at = self._utcnow()
         response.delete_cookie("access_token")
         response.delete_cookie("refresh_token")
-        return {"message": "Session cerrada"}

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
+from app.core.config import settings
 from app.core.database import engine
 from app.modules.health.router import router as health_router
 from app.modules.auth.router import router as auth_router
@@ -31,18 +32,18 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_origins= settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(health_router)
-app.include_router(auth_router)
-app.include_router(categorias_router)
-app.include_router(ingredientes_router)
-app.include_router(productos_router)
-app.include_router(direcciones_router)
-app.include_router(pedidos_router)
-app.include_router(admin_router)
-app.include_router(catalogos_router)
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(categorias_router, prefix="/api/v1")
+app.include_router(ingredientes_router, prefix="/api/v1")
+app.include_router(productos_router, prefix="/api/v1")
+app.include_router(direcciones_router, prefix="/api/v1")
+app.include_router(pedidos_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
+app.include_router(catalogos_router, prefix="/api/v1")
