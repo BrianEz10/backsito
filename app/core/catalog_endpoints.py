@@ -6,6 +6,9 @@ from app.modules.forma_pago.models import FormaPago
 from app.modules.forma_pago.schemas import FormaPagoOut
 from app.modules.unidad_medida.models import UnidadMedida
 from app.modules.unidad_medida.schemas import UnidadMedidaOut
+from app.modules.roles.models import Rol
+from app.modules.roles.schemas import RolOut
+
 
 router = APIRouter(tags=["catalogos"])
 
@@ -22,3 +25,8 @@ def listar_unidades_medida(_user: CurrentUser, session: SessionDep):
         select(UnidadMedida).where(UnidadMedida.deleted_at.is_(None))
     ).all()
     return [UnidadMedidaOut.model_validate(u) for u in unidades]
+
+@router.get("/roles", response_model=list[RolOut])
+def listar_roles(_user: CurrentUser, session: SessionDep):
+    roles = session.exec(select(Rol)).all()
+    return [RolOut.model_validate(r) for r in roles]

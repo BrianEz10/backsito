@@ -22,6 +22,13 @@ ROLES_ADMIN_PEDIDOS = ["ADMIN", "PEDIDOS"]
 ROLES_SIN_DIRECCION = ["ADMIN", "CAJERO"]  
 COSTO_ENVIO = 50.00
 
+EVENTOS_WS = {
+    "CONFIRMADO": "PEDIDO_CONFIRMADO",
+    "EN_PREP": "PEDIDO_EN_PREPARACION",
+    "EN_CAMINO": "PEDIDO_EN_CAMINO",
+    "ENTREGADO": "PEDIDO_ENTREGADO",
+    "CANCELADO": "PEDIDO_CANCELADO",
+}
     
 class PedidoService:
     def __init__(self, session: Session) -> None:
@@ -154,7 +161,7 @@ class PedidoService:
             result = self._pedido_to_out(pedido)
         return result
 
-    def avanzar_estado(self, pedido_id: int, data: AvanceEstadoRequest, usuario_id: int, roles: list[str]) -> PedidoOut:
+    async def avanzar_estado(self, pedido_id: int, data: AvanceEstadoRequest, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             pedido = self._get_or_404(uow, pedido_id)
             estado_actual = pedido.estado_codigo
@@ -188,6 +195,10 @@ class PedidoService:
             )
             uow.pedidos.session.add(historial)
             result = self._pedido_to_out(pedido)
+            event_type = EVENTOS_WS.get(estado_destino)
+            if event_type:
+                from app.core.websocket_manager import manager
+                await manager.broadcast(event_type, result.model_dump())
         return result
 
     def delete(self, pedido_id: int) -> None:

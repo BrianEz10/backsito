@@ -23,12 +23,12 @@ def obtener(id: int, _user: CurrentUser, svc: ProductoService = Depends(get_prod
 
 
 @router.post("/", response_model=ProductoOut, status_code=status.HTTP_201_CREATED)
-def crear(_admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], data: ProductoCreate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
+def crear(_admin: Annotated[Usuario, Depends(require_role(["ADMIN", "STOCK"]))], data: ProductoCreate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
     return svc.create(data)
 
 
 @router.patch("/{id}", response_model=ProductoOut)
-def actualizar(id: int, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], data: ProductoUpdate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
+def actualizar(id: int, _admin: Annotated[Usuario, Depends(require_role(["ADMIN", "STOCK"]))], data: ProductoUpdate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
     return svc.update(id, data)
 
 @router.patch("/{id}/disponibilidad", response_model=ProductoOut)
