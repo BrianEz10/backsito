@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from sqlmodel import SQLModel
 from pydantic import EmailStr, field_validator
 
