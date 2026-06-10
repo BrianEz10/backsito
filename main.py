@@ -16,6 +16,7 @@ from app.modules.pedidos.router import router as pedidos_router
 from app.modules.admin.router import router as admin_router
 from app.core.catalog_endpoints import router as catalogos_router
 from app.modules.pagos.router import router as pagos_router
+from app.modules.uploads.router import router as uploads_router
 
 
 @asynccontextmanager
@@ -27,6 +28,12 @@ async def lifespan(app: FastAPI):
         seed_admin_test(session)
         seed_estados_pedido(session)
         seed_formas_pago(session)
+        import cloudinary
+        cloudinary.config(
+            cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+            api_key=settings.CLOUDINARY_API_KEY,
+            api_secret=settings.CLOUDINARY_API_SECRET
+        )
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -49,3 +56,4 @@ app.include_router(pedidos_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(catalogos_router, prefix="/api/v1")
 app.include_router(pagos_router, prefix="/api/v1")
+app.include_router(uploads_router, prefix="/api/v1")
