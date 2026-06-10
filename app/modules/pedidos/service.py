@@ -7,6 +7,7 @@ from app.modules.pedidos.uow import PedidoUnitOfWork
 from app.modules.productos.models import Producto
 from app.modules.direcciones.models import DireccionEntrega
 from app.modules.forma_pago.models import FormaPago
+from app.core.ws_manager import manager
 
 
 TRANSICIONES_VALIDAS = {
@@ -195,14 +196,17 @@ class PedidoService:
             uow.pedidos.session.add(historial)
             result = self._pedido_to_out(pedido)
 
-            # ========== ACÁ TERMINA EL UoW → COMMIT OCURRIÓ ==========
-            # RN-06: broadcast SIEMPRE después del commit, NUNCA dentro del bloque
 
-        from app.core.websocket_manager import manager
-
-        event_type = EVENTOS_WS.get(estado_destino)
-        if event_type:
-            await manager.broadcast(event_type, result.model_dump())
+        evento = {
+            "event": EVENTOS_WS.get(estado_destino, "estado_cambiado"),
+            "pedido_id": pedido_id,
+            "estado_anterior": estado_actual,
+            "estado_nuevo": estado_destino,
+            "usuario_id": usuario_id,
+            "motivo": data.motivo,
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+        }
+        await manager.broadcast_pedido(pedido_id, evento)
 
         return result
 
