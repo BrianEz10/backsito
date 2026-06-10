@@ -22,7 +22,7 @@ class BaseRepository(Generic[ModelT]):
         self.session.refresh(instance)
         return instance
     
-    #Medio al pedo para lo que estamos trabajando
+    #Faltan crear funciones, "soft-delete", "update" y "count"
     def delete(self, instance: ModelT) -> None:
         self.session.delete(instance)
         self.session.flush()
