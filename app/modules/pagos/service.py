@@ -2,13 +2,13 @@ import uuid
 import logging
 from datetime import datetime
 from typing import Optional
-from fastapi import HTTPException, status
 from sqlmodel import Session
 from app.core.config import settings
 from app.modules.pedidos.models import Pedido, HistorialEstadoPedido
 from app.modules.pagos.models import Pago
 from app.modules.pagos.schemas import PagoCrearResponse, PagoEstadoResponse
 from app.modules.pagos.uow import PagoUnitOfWork
+from app.core.errors import http_error
 
 
 logger = logging.getLogger(__name__)
@@ -109,16 +109,10 @@ class PaymentService:
         pedido = self._session.get(Pedido, pedido_id)
 
         if not pedido:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pedido no encontrado",
-            )
+            raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
 
         if not self._get_mp_access_token():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="MercadoPago no configurado. Configure MP_ACCESS_TOKEN",
-            )
+            raise http_error(400, "MercadoPago no configurado. Configure MP_ACCESS_TOKEN", "NOT_CONFIGURED")
 
         base_url = settings.MP_NOTIFICATION_URL or "http://localhost:8000"
         back_urls = {
@@ -135,10 +129,7 @@ class PaymentService:
                 back_urls=back_urls,
             )
         except RuntimeError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
+            raise http_error(400, str(e), "NOT_CONFIGURED")
 
         with PagoUnitOfWork(self._session) as uow:
             pago = Pago(
@@ -248,10 +239,7 @@ class PaymentService:
         pedido = self._session.get(Pedido, pedido_id)
 
         if not pedido:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pedido no encontrado",
-            )
+            raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
 
         resolved_payment_id = payment_id
         if not resolved_payment_id:
@@ -264,10 +252,7 @@ class PaymentService:
             try:
                 mp_info = self._consultar_pago_mp(resolved_payment_id)
             except RuntimeError as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(e)
-                )
+                raise http_error(400, str(e), "NOT_CONFIGURED")
 
             estado_mp = mp_info.get("mp_status")
             if estado_mp == "approved":

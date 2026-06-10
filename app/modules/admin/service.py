@@ -1,11 +1,10 @@
-from fastapi import HTTPException
 from datetime import datetime, timezone
 from sqlmodel import Session, select
 from app.modules.auth.models import Usuario
 from app.modules.roles.associations import UsuarioRol
-from app.modules.roles.models import Rol
 from app.modules.admin.schemas import AdminUserOut, AdminUserUpdate, AdminAsignarRolesRequest
 from app.modules.admin.uow import AdminUnitOfWork
+from app.core.errors import http_error
 
 
 class AdminService:
@@ -48,7 +47,7 @@ class AdminService:
         with AdminUnitOfWork(self._session) as uow:
             user = uow.usuarios.get_by_id(usuario_id)
             if not user or user.deleted_at is not None:
-                raise HTTPException(404, "Usuario no encontrado")
+                raise http_error(404, "Usuario no encontrado", "NOT_FOUND", "usuario_id")
             patch = data.model_dump(exclude_unset=True)
             for field, value in patch.items():
                 setattr(user, field, value)
@@ -60,7 +59,7 @@ class AdminService:
         with AdminUnitOfWork(self._session) as uow:
             user = uow.usuarios.get_by_id(usuario_id)
             if not user or user.deleted_at is not None:
-                raise HTTPException(404, "Usuario no encontrado")
+                raise http_error(404, "Usuario no encontrado", "NOT_FOUND", "usuario_id")
             old_links = uow._session.exec(
                 select(UsuarioRol).where(UsuarioRol.usuario_id == usuario_id)
             ).all()
@@ -69,7 +68,7 @@ class AdminService:
             for rol_codigo in data.roles:
                 rol = uow.roles.get_by_id(rol_codigo)
                 if not rol:
-                    raise HTTPException(400, f"Rol {rol_codigo} no existe")
+                    raise http_error(400, f"Rol {rol_codigo} no existe", "NOT_FOUND", "roles")
                 uow._session.add(UsuarioRol(usuario_id=usuario_id, rol_codigo=rol_codigo))
             uow._session.flush()
             result = self._user_to_out(user)
@@ -77,9 +76,9 @@ class AdminService:
 
     def delete(self, usuario_id: int, current_user_id: int) -> None:
         if usuario_id == current_user_id:
-            raise HTTPException(400, "No puedes eliminarte a ti mismo")
+            raise http_error(400, "No puedes eliminarte a ti mismo", "BAD_REQUEST")
         with AdminUnitOfWork(self._session) as uow:
             user = uow.usuarios.get_by_id(usuario_id)
             if not user or user.deleted_at is not None:
-                raise HTTPException(404, "Usuario no encontrado")
+                raise http_error(404, "Usuario no encontrado", "NOT_FOUND", "usuario_id")
             user.deleted_at = datetime.now(timezone.utc)

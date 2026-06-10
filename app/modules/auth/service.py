@@ -1,7 +1,7 @@
 import secrets
 import hashlib
 from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException, Response
+from fastapi import Response
 from sqlmodel import Session
 from app.modules.auth.models import Usuario
 from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
@@ -10,7 +10,7 @@ from app.modules.auth.refresh_models import RefreshToken
 from app.modules.roles.associations import UsuarioRol
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.config import settings
-
+from app.core.errors import http_error
 
 #Este AuthService(rehacer) duplica su lógica, cambiar manga de giles.
 
@@ -57,7 +57,7 @@ class AuthService:
         with AuthUnitOfWork(self._session) as uow:
             existing = uow.usuarios.get_by_email(data.email)
             if existing:
-                raise HTTPException(409, "Este email ya fue registrado")
+                raise http_error(409, "Este email ya fue registrado", "ALREADY_EXISTS", "email")
             hashed = hash_password(data.password)
             user = Usuario(
                 email=data.email,
@@ -83,7 +83,7 @@ class AuthService:
         with AuthUnitOfWork(self._session) as uow:
             user = uow.usuarios.get_by_email(data.email)
             if not user or not verify_password(data.password, user.hashed_password):
-                raise HTTPException(401, "Credenciales invalidas")
+                raise http_error(401, "Credenciales invalidas", "INVALID_CREDENTIALS")
             refresh_token_str = self._create_refresh_token(uow, user.id)
             access_token = self.create_token(user)
         self._set_auth_cookies(response, access_token, refresh_token_str)
@@ -100,7 +100,7 @@ class AuthService:
             token = uow.refresh_tokens.get_by_token_hash(token_hash)
             now_utc = self._utcnow()
             if not token or token.expires_at < now_utc or token.revoked_at is not None:
-                raise HTTPException(401, "Refresh token invalido o expirado")
+                raise http_error(401, "Refresh token invalido o expirado", "INVALID_CREDENTIALS")
             token.revoked_at = now_utc
             new_refresh_str = self._create_refresh_token(uow, token.usuario_id)
             user = uow.usuarios.get_by_id(token.usuario_id)

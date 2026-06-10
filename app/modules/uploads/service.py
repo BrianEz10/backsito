@@ -1,5 +1,6 @@
 import logging
 from fastapi import HTTPException, UploadFile, status
+from app.core.errors import http_error
 
 
 logger = logging.getLogger(__name__)
@@ -15,16 +16,11 @@ class UploadService:
 
     def _validate_file(self, file: UploadFile) -> None:
         if file.content_type not in ALLOWED_MIME_TYPES:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Tipo de archivo no soportado: {file.content_type}. Permitidos: jpg, jpeg, png, webp")
-
+            raise http_error(400, f"Tipo de archivo no soportado: {file.content_type}. Permitidos: jpg, jpeg, png, webp", "INVALID_FILE", "file")
 
     def _validate_file_size(self, content: bytes) -> None:
         if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Archivo demasiado grande. Máximo 5 MB")
+            raise http_error(400, "Archivo demasiado grande. Máximo 5 MB", "INVALID_FILE", "file")
 
 
     def upload_imagen(self, file: UploadFile) -> dict:
@@ -58,15 +54,11 @@ class UploadService:
             }
 
         except ImportError:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="cloudinary no instalado. pip install cloudinary")
+            raise http_error(500, "cloudinary no instalado. pip install cloudinary", "INTERNAL_ERROR")
         
         except Exception as e:
             logger.exception("Error al subir imagen a Cloudinary")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error al subir imagen: {str(e)}")
+            raise http_error(500, f"Error al subir imagen: {str(e)}", "INTERNAL_ERROR")
 
 
     def eliminar_imagen(self, public_id: str) -> None:
@@ -84,14 +76,10 @@ class UploadService:
                     detail=f"No se pudo eliminar la imagen: {result.get('result')}")
 
         except ImportError:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="cloudinary no instalado")
+            raise http_error(500, "cloudinary no instalado. pip install cloudinary", "INTERNAL_ERROR")
         
         except HTTPException:
             raise
         except Exception as e:
             logger.exception("Error al eliminar imagen de Cloudinary")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error al eliminar imagen: {str(e)}")
+            raise http_error(500, f"Error al eliminar imagen: {str(e)}", "INTERNAL_ERROR")
