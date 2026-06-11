@@ -26,7 +26,6 @@ def listar_unidades_medida(_user: CurrentUser, session: SessionDep):
     ).all()
     return [UnidadMedidaOut.model_validate(u) for u in unidades]
 
-
 @router.get("/roles", response_model=list[RolOut])
 def listar_roles(_user: CurrentUser, session: SessionDep):
     roles = session.exec(select(Rol)).all()

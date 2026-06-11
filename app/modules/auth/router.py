@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.security import OAuth2PasswordRequestForm
 from app.core.deps import CurrentUser
 from app.core.database import SessionDep
-from app.modules.auth.schemas import LoginRequest, RegisterRequest, UserResponse, TokenResponse
+from app.modules.auth.schemas import UserCreate, UserMeOut
 from app.modules.auth.service import AuthService
 
 
@@ -11,19 +12,19 @@ def get_auth_service(session: SessionDep) -> AuthService:
     return AuthService(session)
 
 @router.post("/register", status_code=201)
-def register(data: RegisterRequest, response: Response, svc: AuthService = Depends(get_auth_service)) -> dict:
+def register(data: UserCreate, response: Response, svc: AuthService = Depends(get_auth_service)) -> dict:
     return svc.register(data, response)
 
 
-@router.post("/login")
-def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service)) -> dict:
-    return svc.login(data, response)
+@router.post("/token")
+def login(response: Response, form: OAuth2PasswordRequestForm = Depends(), svc: AuthService = Depends(get_auth_service)) -> dict:
+    return svc.login(form, response)
 
 
-@router.get("/me", response_model=UserResponse)
-def me(user: CurrentUser) -> UserResponse:
+@router.get("/me", response_model=UserMeOut)
+def me(user: CurrentUser) -> UserMeOut:
     roles = [rol.codigo for rol in user.roles]
-    return UserResponse(
+    return UserMeOut(
         id=user.id,
         email=user.email,
         nombre=user.nombre,
@@ -33,8 +34,8 @@ def me(user: CurrentUser) -> UserResponse:
     )
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response, request: Request, svc: AuthService = Depends(get_auth_service)) -> None:
+@router.post("/logout")
+def logout(response: Response, request: Request, svc: AuthService = Depends(get_auth_service)) -> dict:
     refresh_token_str = request.cookies.get("refresh_token", "")
     return svc.logout(refresh_token_str, response)
 

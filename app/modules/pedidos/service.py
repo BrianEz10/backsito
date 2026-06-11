@@ -1,20 +1,19 @@
+from fastapi import HTTPException
 from datetime import datetime, timezone
 from sqlmodel import Session, select
 from app.modules.pedidos.models import Pedido, DetallePedido, HistorialEstadoPedido
-from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, DetallePedidoOut, HistorialOut, AvanceEstadoRequest, PaginatedPedidos
+from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, DetallePedidoOut, HistorialOut, AvanceEstadoRequest
 from app.modules.pedidos.uow import PedidoUnitOfWork
 from app.modules.productos.models import Producto
 from app.modules.direcciones.models import DireccionEntrega
 from app.modules.forma_pago.models import FormaPago
-from app.core.ws_manager import manager
-from sqlalchemy import func
-from app.core.errors import http_error
 
 
 TRANSICIONES_VALIDAS = {
     "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
-    "CONFIRMADO": ["EN_PREP", "CANCELADO"],
-    "EN_PREP":    ["ENTREGADO", "CANCELADO"],
+    "CONFIRMADO": ["EN_PREP", "PENDIENTE", "CANCELADO"],
+    "EN_PREP":    ["EN_CAMINO", "CONFIRMADO", "CANCELADO"],
+    "EN_CAMINO":  ["ENTREGADO", "EN_PREP", "CANCELADO"],
     "ENTREGADO":  [],
     "CANCELADO":  [],
 }
@@ -26,6 +25,7 @@ COSTO_ENVIO = 50.00
 EVENTOS_WS = {
     "CONFIRMADO": "PEDIDO_CONFIRMADO",
     "EN_PREP": "PEDIDO_EN_PREPARACION",
+    "EN_CAMINO": "PEDIDO_EN_CAMINO",
     "ENTREGADO": "PEDIDO_ENTREGADO",
     "CANCELADO": "PEDIDO_CANCELADO",
 }
@@ -37,7 +37,7 @@ class PedidoService:
     def _get_or_404(self, uow: PedidoUnitOfWork, pedido_id: int) -> Pedido:
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
-            raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+            raise HTTPException(404, "Pedido no encontrado")
         return pedido
     
     def _pedido_to_out(self, pedido: Pedido) -> PedidoOut:
@@ -80,9 +80,9 @@ class PedidoService:
             for item in data.items:
                 producto = uow.pedidos.session.get(Producto, item.producto_id)
                 if not producto or producto.deleted_at is not None:
-                    raise http_error(404, f"Producto {item.producto_id} no encontrado", "NOT_FOUND", "producto_id")
+                    raise HTTPException(404, f"Producto {item.producto_id} no encontrado")
                 if producto.stock_cantidad < item.cantidad:
-                    raise http_error(400, f"Stock insuficiente para {producto.nombre}", "STOCK_INSUFFICIENT", "producto_id")
+                    raise HTTPException(400, f"Stock insuficiente para {producto.nombre}")
                 producto.stock_cantidad -= item.cantidad
                 precio_snap = producto.precio_base
                 subtotal_item = precio_snap * item.cantidad
@@ -100,14 +100,14 @@ class PedidoService:
 
             fp = uow.pedidos.session.get(FormaPago, data.forma_pago_codigo)
             if not fp:
-                raise http_error(400, f"Forma de pago '{data.forma_pago_codigo}' no existe", "NOT_FOUND", "forma_pago_codigo")
+                raise HTTPException(400, f"Forma de pago '{data.forma_pago_codigo}' no existe")
             puede_sin_direccion = any(r in ROLES_SIN_DIRECCION for r in roles)
             if data.direccion_id is not None:
                 dir_entrega = uow.pedidos.session.get(DireccionEntrega, data.direccion_id)
                 if not dir_entrega or dir_entrega.usuario_id != usuario_id:
-                    raise http_error(400, "Dirección de entrega no válida", "BAD_REQUEST", "direccion_id")
+                    raise HTTPException(400, "Dirección de entrega no válida")
             elif not puede_sin_direccion:
-                raise http_error(400, "Dirección de entrega requerida", "BAD_REQUEST", "direccion_id")
+                raise HTTPException(400, "Dirección de entrega requerida para este usuario")
             
 
             costo_envio = 0 if data.direccion_id is None else COSTO_ENVIO
@@ -141,32 +141,23 @@ class PedidoService:
             result = self._pedido_to_out(pedido)
         return result
     
-    def get_all(self, usuario_id: int, roles: list[str], page: int = 1, size: int = 20) -> PaginatedPedidos:
+    def get_all(self, usuario_id: int, roles: list[str]) -> list[PedidoOut]:
         with PedidoUnitOfWork(self._session) as uow:
-            stmt = select(Pedido).where(Pedido.deleted_at == None)
-            if not any(r in ROLES_ADMIN_PEDIDOS for r in roles):
-                stmt = stmt.where(Pedido.usuario_id == usuario_id)
-            stmt = stmt.order_by(Pedido.created_at.desc())
-
-            total = uow.pedidos.session.exec(
-                select(func.count()).select_from(stmt.subquery())
-            ).one()
-
-            stmt = stmt.offset((page - 1) * size).limit(size)
-            pedidos = uow.pedidos.session.exec(stmt).all()
+            if any(r in ROLES_ADMIN_PEDIDOS for r in roles):
+                pedidos = uow.pedidos.get_all_activos()
+            else:
+                pedidos = uow.pedidos.get_by_usuario(usuario_id)
             result = [self._pedido_to_out(p) for p in pedidos]
-            pages = (total + size - 1) // size
-
-        return PaginatedPedidos(items=result, total=total, page=page, size=size, pages=pages)
+        return result
 
     def get_by_id(self, pedido_id: int, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             pedido = uow.pedidos.get_by_id(pedido_id)
             if not pedido:
-                raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+                raise HTTPException(404, "Pedido no encontrado")
             is_admin = any(r in ROLES_ADMIN_PEDIDOS for r in roles)
             if not is_admin and pedido.usuario_id != usuario_id:
-                raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+                raise HTTPException(404, "Pedido no encontrado")
             result = self._pedido_to_out(pedido)
         return result
 
@@ -175,20 +166,19 @@ class PedidoService:
             pedido = self._get_or_404(uow, pedido_id)
             estado_actual = pedido.estado_codigo
             estado_destino = data.estado_hacia
-
             if estado_destino not in TRANSICIONES_VALIDAS.get(estado_actual, []):
-                raise http_error(400, f"No se puede pasar de {estado_actual} a {estado_destino}", "INVALID_STATE", "nuevo_estado")
+                raise HTTPException(400, f"No se puede pasar de {estado_actual} a {estado_destino}")
 
             es_cliente = "CLIENT" in roles
             if es_cliente:
                 if estado_destino != "CANCELADO":
-                    raise http_error(403, "Como cliente solo puedes cancelar pedidos", "FORBIDDEN")
+                    raise HTTPException(403, "Como cliente solo puedes cancelar pedidos")
                 if estado_actual not in ["PENDIENTE", "CONFIRMADO"]:
-                    raise http_error(400, "Solo puedes cancelar pedidos pendientes o confirmados", "INVALID_STATE")
+                    raise HTTPException(400, "Solo puedes cancelar pedidos pendientes o confirmados")
 
             if estado_destino == "CANCELADO" and not data.motivo:
-                raise http_error(400, "Motivo obligatorio para cancelar un pedido", "MOTIVE_REQUIRED", "motivo")
-
+                raise HTTPException(400, "Motivo obligatorio para cancelar un pedido")
+            
             if estado_destino == "CANCELADO":
                 for detalle in pedido.detalles:
                     producto = uow.pedidos.session.get(Producto, detalle.producto_id)
@@ -205,19 +195,10 @@ class PedidoService:
             )
             uow.pedidos.session.add(historial)
             result = self._pedido_to_out(pedido)
-
-
-        evento = {
-            "event": EVENTOS_WS.get(estado_destino, "estado_cambiado"),
-            "pedido_id": pedido_id,
-            "estado_anterior": estado_actual,
-            "estado_nuevo": estado_destino,
-            "usuario_id": usuario_id,
-            "motivo": data.motivo,
-            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-        }
-        await manager.broadcast_pedido(pedido_id, evento)
-
+            event_type = EVENTOS_WS.get(estado_destino)
+            if event_type:
+                from app.core.websocket_manager import manager
+                await manager.broadcast(event_type, result.model_dump())
         return result
 
     def delete(self, pedido_id: int) -> None:

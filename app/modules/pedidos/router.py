@@ -1,12 +1,11 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from app.core.database import SessionDep
 from app.core.deps import CurrentUser, require_role
 from app.core.security import decode_access_token
 from app.modules.auth.models import Usuario
-from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, AvanceEstadoRequest, PaginatedPedidos
+from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, AvanceEstadoRequest
 from app.modules.pedidos.service import PedidoService
-from app.core.ws_manager import manager
 
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 
@@ -20,10 +19,10 @@ def crear(data: PedidoCreate, current_user: CurrentUser, svc: PedidoService = De
     return svc.create(data, current_user.id, roles)
 
 
-@router.get("/", response_model=PaginatedPedidos)
-def listar(current_user: CurrentUser, page: int = Query(default=1, ge=1), size: int = Query(default=20, ge=1, le=100), svc: PedidoService = Depends(get_pedido_service)) -> PaginatedPedidos:
+@router.get("/", response_model=list[PedidoOut])
+def listar(current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> list[PedidoOut]:
     roles = [rol.codigo for rol in current_user.roles]
-    return svc.get_all(current_user.id, roles, page, size)
+    return svc.get_all(current_user.id, roles)
 
 
 @router.get("/{id}", response_model=PedidoOut)
@@ -43,26 +42,32 @@ def eliminar(id: int, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"])
     svc.delete(id)
 
 @router.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    token: str = Query(...),
-    pedido_id: int | None = Query(None),
-):
+async def websocket_endpoint(websocket: WebSocket):
+    token = websocket.cookies.get("access_token")
+    if not token:
+        await websocket.accept()
+        await websocket.close(code=1008, reason="Token requerido")
+        return
+
     payload = decode_access_token(token)
     if not payload:
+        await websocket.accept()
         await websocket.close(code=1008, reason="Token inválido o expirado")
         return
 
-    roles: list[str] = payload.get("roles", [])
-    is_admin = any(r in ("ADMIN", "PEDIDOS") for r in roles)
+    email: str | None = payload.get("sub")
+    if not email:
+        await websocket.accept()
+        await websocket.close(code=1008, reason="Token inválido")
+        return
 
-    channel = str(pedido_id) if pedido_id else ("admin" if is_admin else "user:unknown")
-    await manager.connect(websocket, channel)
+    from app.core.websocket_manager import manager
+    await manager.connect(websocket)
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        pass
-    finally:
-        manager.disconnect(websocket, channel)
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)

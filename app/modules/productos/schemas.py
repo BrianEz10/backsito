@@ -44,10 +44,3 @@ class ProductoOut(SQLModel):
 
 class DisponibilidadRequest(SQLModel):
     disponible: bool
-
-class PaginatedProductos(SQLModel):
-    items: list[ProductoOut]
-    total: int
-    page: int
-    size: int
-    pages: int

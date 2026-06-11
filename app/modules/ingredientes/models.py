@@ -12,7 +12,6 @@ class Ingrediente(Base, table=True):
     nombre: str = Field(unique=True)
     descripcion: str | None = None
     es_alergeno: bool = Field(default=False)
-    stock_cantidad: int = Field(default=0, ge=0)
 
     productos: list["Producto"] = Relationship(
         back_populates="ingredientes", link_model=ProductoIngrediente
