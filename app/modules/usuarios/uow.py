@@ -1,6 +1,6 @@
 from sqlmodel import Session
 from app.core.uow import UnitOfWork
-from app.modules.auth.repository import UsuarioRepository
+from app.modules.usuarios.repository import UsuarioRepository
 from app.modules.roles.repository import RolRepository
 
 

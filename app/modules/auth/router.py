@@ -10,13 +10,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def get_auth_service(session: SessionDep) -> AuthService:
     return AuthService(session)
 
-@router.post("/register", status_code=201)
-def register(data: RegisterRequest, response: Response, svc: AuthService = Depends(get_auth_service)) -> dict:
+@router.post("/register", status_code=201, response_model=TokenResponse)
+def register(data: RegisterRequest, response: Response, svc: AuthService = Depends(get_auth_service)) -> TokenResponse:
     return svc.register(data, response)
 
 
-@router.post("/login")
-def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service)) -> dict:
+@router.post("/login", response_model=TokenResponse)
+def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service))  -> TokenResponse:
     return svc.login(data, response)
 
 
@@ -39,7 +39,7 @@ def logout(response: Response, request: Request, svc: AuthService = Depends(get_
     return svc.logout(refresh_token_str, response)
 
 
-@router.post("/refresh")
-def refresh(response: Response, request: Request, svc: AuthService = Depends(get_auth_service)) -> dict:
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(response: Response, request: Request, svc: AuthService = Depends(get_auth_service)) -> TokenResponse:
     refresh_token_str = request.cookies.get("refresh_token", "")
     return svc.refresh(refresh_token_str, response)

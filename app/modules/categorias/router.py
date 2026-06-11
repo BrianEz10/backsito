@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from app.core.database import SessionDep
 from app.core.deps import CurrentUser, require_role
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.modules.categorias.schemas import CategoriaCreate, CategoriaUpdate, CategoriaOut, CategoriaWithHijos
 from app.modules.categorias.service import CategoriaService
 

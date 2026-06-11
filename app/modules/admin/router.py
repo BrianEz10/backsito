@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from app.core.database import SessionDep
 from app.core.deps import require_role
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.modules.admin.schemas import DashboardResponse
 from app.modules.admin.service import AdminService
 

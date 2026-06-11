@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from app.core.security import hash_password
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.modules.estado_pedido.models import EstadoPedido
 from app.modules.forma_pago.models import FormaPago
 from app.modules.roles.associations import UsuarioRol

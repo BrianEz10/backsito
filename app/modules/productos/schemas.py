@@ -1,4 +1,6 @@
 from sqlmodel import SQLModel, Field
+from app.modules.categorias.schemas import CategoriaOut
+from app.modules.ingredientes.schemas import IngredienteOut
 
 class CategoriaEnProducto(SQLModel):
     categoria_id: int
@@ -51,3 +53,29 @@ class PaginatedProductos(SQLModel):
     page: int
     size: int
     pages: int
+
+class IngredienteEnProductoRequest(SQLModel):
+    ingrediente_id: int
+    cantidad: float = Field(gt=0)
+    unidad_medida_id: int
+    es_removible: bool = False
+
+
+class ProductoIngredienteRead(SQLModel):
+    producto_id: int
+    ingrediente_id: int
+    cantidad: float
+    unidad_medida_id: int
+    es_removible: bool
+
+class ProductoDetail(SQLModel):
+    id: int
+    nombre: str
+    descripcion: str | None = None
+    precio_base: float = 0
+    imagenes_url: list[str] | None = None
+    stock_cantidad: int = 0
+    disponible: bool = True
+    unidad_venta_id: int | None = None
+    categorias: list[CategoriaOut] = []
+    ingredientes: list[IngredienteOut] = []

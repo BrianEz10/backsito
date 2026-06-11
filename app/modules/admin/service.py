@@ -2,7 +2,7 @@ from sqlmodel import Session, select
 from sqlalchemy import func
 from app.modules.pedidos.models import Pedido, DetallePedido
 from app.modules.productos.models import Producto
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.modules.admin.schemas import DashboardResponse, EstadoCount, ProductoVendido, PedidoReciente
 from app.modules.admin.uow import AdminUnitOfWork
 
