@@ -1,12 +1,13 @@
 import logging
-from fastapi import APIRouter, Depends, Request
+from typing import Annotated
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import RedirectResponse
 from app.core.config import settings
 from app.core.database import SessionDep
+from app.modules.usuarios.models import Usuario
 from app.modules.pagos.schemas import CrearPagoRequest, ConfirmarPagoRequest, PagoCrearResponse, PagoEstadoResponse
 from app.modules.pagos.service import PaymentService
-from app.core.deps import CurrentUser
-from app.core.errors import http_error
+from app.core.deps import CurrentUser, require_role
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,9 @@ def get_payment_service(session: SessionDep) -> PaymentService:
     return PaymentService(session)
 
 
-@router.post("/crear", response_model=PagoCrearResponse)
-def create_preference(data: CrearPagoRequest, current_user: CurrentUser, svc: PaymentService = Depends(get_payment_service)):
-    return svc.crear_pago(data.pedido_id)
+@router.post("/crear", response_model=PagoCrearResponse, status_code=status.HTTP_201_CREATED)
+def create_preference(data: CrearPagoRequest, current_user: Annotated[Usuario, Depends(require_role(["CLIENT"]))], svc: PaymentService = Depends(get_payment_service)):
+    return svc.crear_pago(data.pedido_id, current_user.id)
 
 
 @router.post("/webhook")

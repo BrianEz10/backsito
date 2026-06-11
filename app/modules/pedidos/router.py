@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, s
 from app.core.database import SessionDep
 from app.core.deps import CurrentUser, require_role
 from app.core.security import decode_access_token
-from app.modules.auth.models import Usuario
-from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, AvanceEstadoRequest, PaginatedPedidos
+from app.modules.usuarios.models import Usuario
+from app.modules.pedidos.schemas import HistorialOut, PedidoCreate, PedidoOut, AvanceEstadoRequest, PaginatedPedidos
 from app.modules.pedidos.service import PedidoService
 from app.core.ws_manager import manager
 
@@ -15,7 +15,7 @@ def get_pedido_service(session: SessionDep) -> PedidoService:
 
 
 @router.post("/", response_model=PedidoOut, status_code=status.HTTP_201_CREATED)
-def crear(data: PedidoCreate, current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
+def crear(data: PedidoCreate, current_user: Annotated[Usuario, Depends(require_role(["CLIENT"]))], svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
     roles = [rol.codigo for rol in current_user.roles]
     return svc.create(data, current_user.id, roles)
 
@@ -32,21 +32,22 @@ def obtener(id: int, current_user: CurrentUser,svc: PedidoService = Depends(get_
     return svc.get_by_id(id, current_user.id, roles)
 
 
+@router.get("/{id}/historial", response_model=list[HistorialOut])
+def obtener_historial(id: int, current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> list[HistorialOut]:
+    roles = [rol.codigo for rol in current_user.roles]
+    return svc.get_historial(id, current_user.id, roles)
+
+
 @router.patch("/{id}/estado", response_model=PedidoOut)
-async def avanzar_estado(id: int, data: AvanceEstadoRequest, current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
+async def avanzar_estado(id: int, data: AvanceEstadoRequest, current_user: Annotated[Usuario, Depends(require_role(["ADMIN", "PEDIDOS"]))], svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
     roles = [rol.codigo for rol in current_user.roles]
     return await svc.avanzar_estado(id, data, current_user.id, roles)
 
 
 @router.delete("/{id}", response_model=PedidoOut)
-def cancelar_pedido(id: int, current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
+async def cancelar_pedido(id: int, current_user: CurrentUser, svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
     roles = [rol.codigo for rol in current_user.roles]
-    return svc.avanzar_estado(
-        id,
-        AvanceEstadoRequest(estado_hacia="CANCELADO", motivo="Cancelado por el cliente"),
-        current_user.id,
-        roles,
-    )
+    return await svc.avanzar_estado(id, AvanceEstadoRequest(estado_hacia="CANCELADO", motivo="Cancelado por el cliente"), current_user.id, roles,)
 
 
 @router.websocket("/ws")

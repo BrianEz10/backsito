@@ -104,12 +104,15 @@ class PaymentService:
             raise RuntimeError(f"Error de conexión con MP: {str(e)}")
 
 
-    def crear_pago(self, pedido_id: int) -> PagoCrearResponse:
-
+    def crear_pago(self, pedido_id: int, usuario_id: int) -> PagoCrearResponse:
+        
         pedido = self._session.get(Pedido, pedido_id)
 
         if not pedido:
             raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+
+        if pedido.usuario_id != usuario_id:
+            raise http_error(403, "No puedes pagar un pedido que no te pertenece", "FORBIDDEN")
 
         if not self._get_mp_access_token():
             raise http_error(400, "MercadoPago no configurado. Configure MP_ACCESS_TOKEN", "NOT_CONFIGURED")

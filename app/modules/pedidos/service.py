@@ -170,6 +170,20 @@ class PedidoService:
             result = self._pedido_to_out(pedido)
         return result
 
+    def get_historial(self, pedido_id: int, usuario_id: int, roles: list[str]) -> list[HistorialOut]:
+        with PedidoUnitOfWork(self._session) as uow:
+            pedido = self._get_or_404(uow, pedido_id)
+            is_admin = any(r in ROLES_ADMIN_PEDIDOS for r in roles)
+            if not is_admin and pedido.usuario_id != usuario_id:
+                raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+            historial = uow.pedidos.session.exec(
+                select(HistorialEstadoPedido)
+                .where(HistorialEstadoPedido.pedido_id == pedido_id)
+                .order_by(HistorialEstadoPedido.created_at.asc())
+            ).all()
+            result = [HistorialOut.model_validate(h) for h in historial]
+        return result
+
     async def avanzar_estado(self, pedido_id: int, data: AvanceEstadoRequest, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             pedido = self._get_or_404(uow, pedido_id)

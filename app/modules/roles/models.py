@@ -3,7 +3,7 @@ from sqlmodel import Relationship, Field, SQLModel
 from app.modules.roles.associations import UsuarioRol
 
 if TYPE_CHECKING:
-    from app.modules.auth.models import Usuario
+    from app.modules.usuarios.models import Usuario
 
 class Rol(SQLModel, table=True):
     __tablename__: str = "roles"

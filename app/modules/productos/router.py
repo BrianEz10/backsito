@@ -2,8 +2,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from app.core.database import SessionDep
 from app.core.deps import require_role
-from app.modules.auth.models import Usuario
-from app.modules.productos.schemas import DisponibilidadRequest, ProductoCreate, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.usuarios.models import Usuario
+from app.modules.productos.schemas import DisponibilidadRequest, IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.ingredientes.schemas import IngredienteOut
 from app.modules.productos.service import ProductoService
 from app.modules.uploads.schemas import ImagenProductoUpdate
 
@@ -17,14 +18,24 @@ def listar(categoria_id: int | None = Query(default=None), disponible: bool | No
     return svc.get_all(categoria_id, disponible, buscar, page, size)
 
 
-@router.get("/{id}", response_model=ProductoOut)
+@router.get("/{id}", response_model=ProductoDetail)
 def obtener(id: int, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
     return svc.get_by_id(id)
+
+
+@router.get("/{id}/ingredientes", response_model=list[IngredienteOut])
+def listar_ingredientes(id: int, svc: ProductoService = Depends(get_producto_service)) -> list[IngredienteOut]:
+    return svc.get_ingredientes(id)
 
 
 @router.post("/", response_model=ProductoOut, status_code=status.HTTP_201_CREATED)
 def crear(_admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], data: ProductoCreate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
     return svc.create(data)
+
+
+@router.post("/{id}/ingredientes", response_model=ProductoIngredienteRead, status_code=status.HTTP_201_CREATED)
+def agregar_ingrediente(id: int, data: IngredienteEnProductoRequest, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], svc: ProductoService = Depends(get_producto_service)) -> ProductoIngredienteRead:
+    return svc.agregar_ingrediente(id, data)
 
 
 @router.put("/{id}", response_model=ProductoOut)

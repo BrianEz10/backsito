@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlmodel import Session, select
+from app.modules.ingredientes.schemas import IngredienteOut
 from app.modules.productos.models import Producto
-from app.modules.productos.schemas import ProductoCreate, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.productos.schemas import IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
 from app.modules.productos.uow import ProductoUnitOfWork
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
 from app.modules.categorias.models import Categoria
@@ -83,12 +84,46 @@ class ProductoService:
 
         return PaginatedProductos(items=result, total=total, page=page, size=size, pages=pages)
 
-    def get_by_id(self, producto_id: int) -> ProductoOut:
+    def get_by_id(self, producto_id: int) -> ProductoDetail:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
-            result = ProductoOut.model_validate(producto)
+            result = ProductoDetail.model_validate(producto)
         return result
     
+    def get_ingredientes(self, producto_id: int) -> list[IngredienteOut]:
+        with ProductoUnitOfWork(self._session) as uow:
+            producto = self._get_or_404(uow, producto_id)
+            result = [
+                IngredienteOut.model_validate(ing)
+                for ing in producto.ingredientes
+            ]
+        return result
+
+    def agregar_ingrediente(self, producto_id: int, data: IngredienteEnProductoRequest) -> ProductoIngredienteRead:
+        with ProductoUnitOfWork(self._session) as uow:
+            self._get_or_404(uow, producto_id)
+            ing = uow.productos.session.get(Ingrediente, data.ingrediente_id)
+            if not ing:
+                raise http_error(404, "Ingrediente no encontrado", "NOT_FOUND", "ingrediente_id")
+            if data.cantidad <= 0:
+                raise http_error(400, "La cantidad debe ser mayor a 0", "BAD_REQUEST", "cantidad")
+            link = ProductoIngrediente(
+                producto_id=producto_id,
+                ingrediente_id=data.ingrediente_id,
+                cantidad=data.cantidad,
+                unidad_medida_id=data.unidad_medida_id,
+                es_removible=data.es_removible,
+            )
+            uow.productos.session.add(link)
+            result = ProductoIngredienteRead(
+                producto_id=producto_id,
+                ingrediente_id=data.ingrediente_id,
+                cantidad=data.cantidad,
+                unidad_medida_id=data.unidad_medida_id,
+                es_removible=data.es_removible,
+            )
+        return result
+
     def update(self, producto_id: int, data: ProductoUpdate) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
