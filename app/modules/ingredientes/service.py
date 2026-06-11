@@ -1,9 +1,10 @@
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 from datetime import datetime, timezone
 from app.modules.ingredientes.models import Ingrediente
 from app.modules.ingredientes.schemas import IngredienteCreate, IngredienteUpdate, IngredienteOut
 from app.modules.ingredientes.uow import IngredienteUnitOfWork
-from app.core.errors import http_error
 
 class IngredienteService:
     def __init__(self, session: Session) -> None:
@@ -12,14 +13,14 @@ class IngredienteService:
     def _get_or_404(self, uow: IngredienteUnitOfWork, ingrediente_id: int) -> Ingrediente:
         ingrediente = uow.ingredientes.get_by_id(ingrediente_id)
         if not ingrediente:
-            raise http_error(404, f"Ingrediente con id {ingrediente_id} no encontrado", "NOT_FOUND", "ingrediente_id")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Ingrediente con id {ingrediente_id} no encontrado")
         return ingrediente
     
     def create(self, data: IngredienteCreate) -> IngredienteOut:
         with IngredienteUnitOfWork(self._session) as uow:
             existing = uow.ingredientes.get_by_nombre(data.nombre)
             if existing:
-                raise http_error(409, "Ya existe un ingrediente con ese nombre", "ALREADY_EXISTS", "nombre")
+                raise HTTPException(409, "Ya existe un ingrediente con ese nombre")
             ingrediente = Ingrediente.model_validate(data)
             uow.ingredientes.add(ingrediente)
             result = IngredienteOut.model_validate(ingrediente)

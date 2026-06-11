@@ -49,10 +49,3 @@ class PedidoOut(SQLModel):
 class AvanceEstadoRequest(SQLModel):
     estado_hacia: str
     motivo: str | None = None
-
-class PaginatedPedidos(SQLModel):
-    items: list[PedidoOut]
-    total: int
-    page: int
-    size: int
-    pages: int

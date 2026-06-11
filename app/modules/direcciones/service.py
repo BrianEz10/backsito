@@ -1,9 +1,9 @@
+from fastapi import HTTPException, status
 from datetime import datetime, timezone
 from sqlmodel import Session
 from app.modules.direcciones.models import DireccionEntrega
 from app.modules.direcciones.schemas import DireccionCreate, DireccionUpdate, DireccionOut
 from app.modules.direcciones.uow import DireccionUnitOfWork
-from app.core.errors import http_error
 
 class DireccionService:
     def __init__(self, session: Session) -> None:
@@ -12,7 +12,10 @@ class DireccionService:
     def _get_mia_or_404(self, uow: DireccionUnitOfWork, usuario_id: int, direccion_id: int) -> DireccionEntrega:
         direccion = uow.direcciones.get_by_id(direccion_id)
         if not direccion or direccion.usuario_id != usuario_id:
-            raise http_error(404, "Direccion no encontrada", "NOT_FOUND")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Direccion no encontrada"
+            )
         return direccion
     
     def get_mis_direcciones(self, usuario_id: int) -> list[DireccionOut]:

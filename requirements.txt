@@ -7,6 +7,3 @@ bcrypt==4.0.1
 pydantic-settings
 python-multipart
 python-dotenv
-email-validator
-mercadopago
-cloudinary

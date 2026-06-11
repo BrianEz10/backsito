@@ -1,64 +1,71 @@
-# Tienda de comida Food Store - Backend API
+## Setup
 
-Este es un sistema de pedidos de comida. El backend esta desarrollado con FastAPI, SQLModel y PostgreSQL.
+```bash
+# 1. Clonamos el repo
+git clone "repo-url"
+cd backend
 
-# Nuestro Stack
-
-**FastAPI**
-
-**SQLModel**
-
-**PostgreSQL**
-
-**Mercado Pago**
-
-**Cloudinary**
-
-# Como instalarlo
-
-## 1. Clonas el repo.
-git clone https://github.com/BrianEz10/backsito.git
-
-## 2. Entras a la carpeta del backend.
-
-cd backsito
-
-## 3. Generas el entorno virtual.
-
+# 2. Entorno virtual
 python -m venv venv
 
-## 4. Activas el entorno virtual, dependiendo de tu sistema operativo.
+# Linux/macOS
+source venv/bin/activate  
 
-- **Linux/macOS**: source venv/bin/activate 
-- **Windows**: venv\Scripts\activate 
+# Windows
+venv\Scripts\activate   
 
-## 5. Instalamos las dependencias.
-
+# 3. Dependencias
 pip install -r requirements.txt
 
-## 6. Creamos nuestras variables de entorno.
-
+# 4. Variables de entorno
 cp .env.example .env
+# Editar .env con sus credenciales
 
-## 7. Creamos la base de datos.
+.env.example
+DATABASE_URL=postgresql+psycopg://usuario:password@localhost:5432/food_store
+SECRET_KEY=changeme
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 
+Base de datos
+
+# Opción 1: la creamos con createdb
+createdb food_store
+
+# Opción 2: la creamos con psql
 psql -U postgres -c "CREATE DATABASE food_store;"
 
-## 8. Levantamos el proyecto.
+Ejecutar
 
 uvicorn main:app --reload
 
-## 9. Ingresamos al swagger para ver los endpoints
+La API queda en http://localhost:8000. Documentación interactiva en http://localhost:8000/docs.
 
-http://localhost:8000/docs
+Seed
 
+Al iniciar el servidor se crean automáticamente:
 
-# Generacion del Seed
+- Roles: ADMIN, STOCK, PEDIDOS, CLIENT
+- Admin de prueba: admin@test.com / Admin1234!
+- Unidades de medida: kg, g, L, mL, u, doc, m²
+- Estados de pedido: PENDIENTE, CONFIRMADO, EN_PREP, EN_CAMINO, ENTREGADO, CANCELADO
+- Formas de pago: EFECTIVO, MERCADOPAGO, TRANSFERENCIA
 
-## Al iniciar el servidor se crean automaticamente:
-
-- **Roles**: ADMIN, STOCK, PEDIDOS, CLIENT
-- **Estado de pedido**: PENDIENTE, CONFIRMADO, EN_PREP, ENTREGADO, CANCELADO
-- **Formas de pago**: MERCADO_PAGO, EFECTIVO, TRANSFERENCIA
-- **Unidades de medida**: kg, g, mL, ud, porciones
-- **Usuario del admin**: El email es "admin@foodstore.com" y la contraseña es "Admin1234!"
+Estructura
+backend/
+├── app/
+│   ├── core/         → Config, DB, seguridad, repo base, UOW
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── categorias/
+│   │   ├── direcciones/
+│   │   ├── estado_pedido/
+│   │   ├── forma_pago/
+│   │   ├── ingredientes/
+│   │   ├── pedidos/
+│   │   ├── productos/
+│   │   ├── roles/
+│   │   └── unidad_medida/
+│   └── db/           → Seeds
+├── main.py
+└── requirements.txt

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status
 from app.core.database import SessionDep
 from app.core.deps import CurrentUser, require_role
 from app.modules.auth.models import Usuario
-from app.modules.productos.schemas import DisponibilidadRequest, ProductoCreate, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.productos.schemas import DisponibilidadRequest, ProductoCreate, ProductoUpdate, ProductoOut
 from app.modules.productos.service import ProductoService
 
 
@@ -12,9 +12,9 @@ router = APIRouter(prefix="/productos", tags=["productos"])
 def get_producto_service(session: SessionDep) -> ProductoService:
     return ProductoService(session)
 
-@router.get("/", response_model=PaginatedProductos)
-def listar(_user: CurrentUser, categoria_id: int | None = Query(default=None), disponible: bool | None = Query(default=None), buscar: str | None = Query(default=None), page: int = Query(default=1, ge=1), size: int = Query(default=20, ge=1, le=100), svc: ProductoService = Depends(get_producto_service)) -> PaginatedProductos:
-    return svc.get_all(categoria_id, disponible, buscar, page, size)
+@router.get("/", response_model=list[ProductoOut])
+def listar(_user: CurrentUser, categoria_id: int | None = Query(default=None), disponible: bool | None = Query(default=None), buscar: str | None = Query(default=None), offset: int = Query(default=0, ge=0), limit: int = Query(default=20, ge=1, le=100), svc: ProductoService = Depends(get_producto_service)) -> list[ProductoOut]:
+    return svc.get_all(categoria_id, disponible, buscar, offset, limit)
 
 
 @router.get("/{id}", response_model=ProductoOut)
