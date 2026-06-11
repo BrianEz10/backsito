@@ -17,6 +17,7 @@ from app.core.catalog_endpoints import router as catalogos_router
 from app.modules.pagos.router import router as pagos_router
 from app.modules.uploads.router import router as uploads_router
 from app.modules.usuarios.router import router as usuarios_router
+from app.core.rate_limit.rate_limit_middleware import RateLimitMiddleware
 
 
 @asynccontextmanager
@@ -49,6 +50,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(RateLimitMiddleware)
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(categorias_router, prefix="/api/v1")

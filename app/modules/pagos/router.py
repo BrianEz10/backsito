@@ -5,7 +5,8 @@ from app.core.config import settings
 from app.core.database import SessionDep
 from app.modules.pagos.schemas import CrearPagoRequest, ConfirmarPagoRequest, PagoCrearResponse, PagoEstadoResponse
 from app.modules.pagos.service import PaymentService
-
+from app.core.deps import CurrentUser
+from app.core.errors import http_error
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,8 @@ def get_payment_service(session: SessionDep) -> PaymentService:
     return PaymentService(session)
 
 
-@router.post("/create-preference", response_model=PagoCrearResponse)
-def create_preference(data: CrearPagoRequest, svc: PaymentService = Depends(get_payment_service)):
+@router.post("/crear", response_model=PagoCrearResponse)
+def create_preference(data: CrearPagoRequest, current_user: CurrentUser, svc: PaymentService = Depends(get_payment_service)):
     return svc.crear_pago(data.pedido_id)
 
 
@@ -50,3 +51,9 @@ async def redirect_after_pago(pedido_id: int, status: str, request: Request):
     if qs:
         url += f"?{qs}"
     return RedirectResponse(url=url)
+
+
+@router.get("/{pedido_id}")
+def obtener_pago(pedido_id: int, current_user: CurrentUser, svc: PaymentService = Depends(get_payment_service)):
+    roles = [rol.codigo for rol in current_user.roles]
+    return svc.obtener_pago(pedido_id, current_user.id, roles)
