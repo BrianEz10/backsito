@@ -1,5 +1,6 @@
 from typing import TypeVar, Generic, Type, Sequence
 from sqlmodel import Session, SQLModel, select
+from sqlalchemy import func
 
 ModelT = TypeVar("ModelT", bound=SQLModel)
 
@@ -16,13 +17,18 @@ class BaseRepository(Generic[ModelT]):
             select(self.model).offset(offset).limit(limit)
         ).all()
     
+    def count(self) -> int:
+        return self.session.exec(
+            select(func.count()).select_from(self.model)
+        ).one()
+
     def add(self, instance: ModelT) -> ModelT:
         self.session.add(instance)
         self.session.flush()
         self.session.refresh(instance)
         return instance
     
-    #Medio al pedo para lo que estamos trabajando
+    #Faltan crear funciones, "soft-delete", "update"
     def delete(self, instance: ModelT) -> None:
         self.session.delete(instance)
         self.session.flush()
