@@ -296,3 +296,25 @@ class PaymentService:
                 estado=pago_local.estado if pago_local else None,
                 pedido_id=pedido_id,
             )
+        
+    def obtener_pago(self, pedido_id: int, usuario_id: int, roles: list[str]) -> dict | None:
+        with PagoUnitOfWork(self._session) as uow:
+            pago = uow.pagos.get_ultimo_by_pedido(pedido_id)
+            if not pago:
+                raise http_error(404, "Pago no encontrado", "NOT_FOUND", "pedido_id")
+
+            pedido = self._session.get(Pedido, pago.pedido_id)
+            is_admin = any(r in ("ADMIN",) for r in roles)
+            if not is_admin and pedido and pedido.usuario_id != usuario_id:
+                raise http_error(404, "Pago no encontrado", "NOT_FOUND", "pedido_id")
+
+            return {
+                "id": pago.id,
+                "pedido_id": pago.pedido_id,
+                "monto": pago.monto,
+                "estado": pago.estado,
+                "mp_payment_id": pago.mp_payment_id,
+                "mp_status": pago.mp_status,
+                "mp_status_detail": pago.mp_status_detail,
+                "created_at": pago.created_at,
+            }

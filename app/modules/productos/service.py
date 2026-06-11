@@ -140,6 +140,13 @@ class ProductoService:
             result = ProductoOut.model_validate(producto)
         return result
     
+    def update_imagenes(self, producto_id: int, imagenes_url: list[str]) -> ProductoOut:
+        with ProductoUnitOfWork(self._session) as uow:
+            producto = self._get_or_404(uow, producto_id)
+            producto.imagenes_url = imagenes_url
+            result = ProductoOut.model_validate(producto)
+        return result
+    
     def toggle_disponibilidad(self, producto_id: int, disponible: bool) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
