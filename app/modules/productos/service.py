@@ -1,13 +1,15 @@
-from fastapi import HTTPException, status
 from datetime import datetime, timezone
+from sqlalchemy import func
 from sqlmodel import Session, select
 from app.modules.productos.models import Producto
-from app.modules.productos.schemas import ProductoCreate, ProductoUpdate, ProductoOut
+from app.modules.productos.schemas import ProductoCreate, ProductoUpdate, ProductoOut, PaginatedProductos
 from app.modules.productos.uow import ProductoUnitOfWork
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
 from app.modules.categorias.models import Categoria
 from app.modules.ingredientes.models import Ingrediente
 from app.modules.unidad_medida.models import UnidadMedida
+from app.core.errors import http_error
+
 
 class ProductoService:
     def __init__(self, session: Session) -> None:
@@ -16,7 +18,7 @@ class ProductoService:
     def _get_or_404(self, uow: ProductoUnitOfWork, producto_id: int) -> Producto:
         producto = uow.productos.get_by_id(producto_id)
         if not producto:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Producto no encontrado")
+            raise http_error(404, "Producto no encontrado", "NOT_FOUND", "producto_id")
         return producto
     
     def create(self, data: ProductoCreate) -> ProductoOut:
@@ -26,17 +28,14 @@ class ProductoService:
             if data.unidad_venta_id is not None:
                 um = uow.productos.session.get(UnidadMedida, data.unidad_venta_id)
                 if not um:
-                    raise HTTPException(400, "Unidad de medida no encontrada")
+                    raise http_error(400, "Unidad de medida no encontrada", "NOT_FOUND", "unidad_venta_id")
             principales = [c for c in data.categorias if c.es_principal]
             if len(principales) > 1:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Solo puede haber una categoría principal por producto",
-                )
+                raise http_error(400, "Solo puede haber una categoría principal por producto", "BAD_REQUEST", "categorias")
             for cat_data in data.categorias:
                 cat = uow.productos.session.get(Categoria, cat_data.categoria_id)
                 if not cat:
-                    raise HTTPException(404, "Categoria no encontrada")
+                    raise http_error(404, "Categoria no encontrada", "NOT_FOUND", "categoria_id")
                 link = ProductoCategoria(
                     producto_id=producto.id,
                     categoria_id=cat_data.categoria_id,
@@ -46,9 +45,9 @@ class ProductoService:
             for ing_data in data.ingredientes:
                 ing = uow.productos.session.get(Ingrediente, ing_data.ingrediente_id)
                 if not ing:
-                    raise HTTPException(404, f"Ingrediente no encontrado")
+                    raise http_error(404, "Ingrediente no encontrado", "NOT_FOUND", "ingrediente_id")
                 if ing_data.cantidad <= 0:
-                    raise HTTPException(400, "La cantidad debe ser mayor a 0")
+                    raise http_error(400, "La cantidad debe ser mayor a 0", "BAD_REQUEST", "cantidad")
                 link = ProductoIngrediente(
                     producto_id=producto.id,
                     ingrediente_id=ing_data.ingrediente_id,
@@ -60,7 +59,8 @@ class ProductoService:
             result = ProductoOut.model_validate(producto)
         return result
     
-    def get_all(self, categoria_id: int | None = None, disponible: bool | None = None, buscar: str | None = None, offset: int = 0, limit: int = 20) -> list[ProductoOut]:
+    def get_all(self, categoria_id: int | None = None, disponible: bool | None = None,
+                buscar: str | None = None, page: int = 1, size: int = 20) -> PaginatedProductos:
         with ProductoUnitOfWork(self._session) as uow:
             stmt = select(Producto).where(Producto.deleted_at == None)
             if categoria_id is not None:
@@ -71,10 +71,17 @@ class ProductoService:
                 stmt = stmt.where(Producto.disponible == disponible)
             if buscar:
                 stmt = stmt.where(Producto.nombre.ilike(f"%{buscar}%"))
-            stmt = stmt.offset(offset).limit(limit).order_by(Producto.id)
+
+            total = uow.productos.session.exec(
+                select(func.count()).select_from(stmt.subquery())
+            ).one()
+
+            stmt = stmt.offset((page - 1) * size).limit(size).order_by(Producto.id)
             productos = uow.productos.session.exec(stmt).all()
             result = [ProductoOut.model_validate(p) for p in productos]
-        return result
+            pages = (total + size - 1) // size
+
+        return PaginatedProductos(items=result, total=total, page=page, size=size, pages=pages)
 
     def get_by_id(self, producto_id: int) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
@@ -91,10 +98,7 @@ class ProductoService:
             if data.categorias is not None:
                 principales = [c for c in data.categorias if c.es_principal]
                 if len(principales) > 1:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Solo puede haber una categoría principal por producto",
-                    )
+                    raise http_error(400, "Solo puede haber una categoría principal por producto", "BAD_REQUEST", "categorias")
                 old_cat_links = uow.productos.session.exec(
                     select(ProductoCategoria).where(ProductoCategoria.producto_id == producto_id)
                 ).all()
@@ -104,7 +108,7 @@ class ProductoService:
                 for cat_data in data.categorias:
                     cat = uow.productos.session.get(Categoria, cat_data.categoria_id)
                     if not cat:
-                        raise HTTPException(404, "Categoria no encontrada")
+                        raise http_error(404, "Categoria no encontrada", "NOT_FOUND", "categoria_id")
                     link = ProductoCategoria(
                         producto_id=producto.id,
                         categoria_id=cat_data.categoria_id,
@@ -121,9 +125,9 @@ class ProductoService:
                 for ing_data in data.ingredientes:
                     ing = uow.productos.session.get(Ingrediente, ing_data.ingrediente_id)
                     if not ing:
-                        raise HTTPException(404, f"Ingrediente {ing_data.ingrediente_id} no encontrado")
+                        raise http_error(404, f"Ingrediente {ing_data.ingrediente_id} no encontrado", "NOT_FOUND", "ingrediente_id")
                     if ing_data.cantidad <= 0:
-                        raise HTTPException(400, "La cantidad debe ser mayor a 0")
+                        raise http_error(400, "La cantidad debe ser mayor a 0", "BAD_REQUEST", "cantidad")
                     link = ProductoIngrediente(
                         producto_id=producto_id,
                         ingrediente_id=ing_data.ingrediente_id,
