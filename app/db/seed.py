@@ -26,13 +26,12 @@ def seed_roles(session: Session):
 #Estados predefinidos de UnidadMedida
 
 UNIDADES_MEDIDA_SEED = [
-    UnidadMedida(nombre="kilogramo", simbolo="kg", tipo="masa"),
-    UnidadMedida(nombre="gramo", simbolo="g", tipo="masa"),
+    UnidadMedida(nombre="kilogramo", simbolo="kg", tipo="peso"),
+    UnidadMedida(nombre="gramo", simbolo="g", tipo="peso"),
     UnidadMedida(nombre="litro", simbolo="L", tipo="volumen"),
     UnidadMedida(nombre="mililitro", simbolo="mL", tipo="volumen"),
-    UnidadMedida(nombre="pieza", simbolo="u", tipo="unidad"),
-    UnidadMedida(nombre="docena", simbolo="doc", tipo="unidad"),
-    UnidadMedida(nombre="metro cuadrado", simbolo="m²", tipo="area"),
+    UnidadMedida(nombre="unidad", simbolo="ud", tipo="contable"),
+    UnidadMedida(nombre="porción", simbolo="porciones", tipo="contable"),
 ]
 
 def seed_unidades_medida(session: Session):
@@ -47,9 +46,9 @@ def seed_unidades_medida(session: Session):
 #Creacion de cuenta admin automatica
 
 ADMIN_SEED = {
-    "email": "admin@test.com",
+    "email": "admin@foodstore.com",
     "nombre": "Admin",
-    "apellido": "Test",
+    "apellido": "FoodStore",
     "password": "Admin1234!",
 }
 
@@ -74,13 +73,13 @@ def seed_admin_test(session: Session):
 #Estados predefinidos de EstadoPedido
 
 ESTADOS_PEDIDO_SEED = [
-    EstadoPedido(codigo="PENDIENTE", descripcion="Pedido recibido, esperando confirmación", orden=1, es_terminal=False),
-    EstadoPedido(codigo="CONFIRMADO", descripcion="Pedido confirmado por el local", orden=2, es_terminal=False),
-    EstadoPedido(codigo="EN_PREP", descripcion="Pedido en preparación", orden=3, es_terminal=False),
-    EstadoPedido(codigo="EN_CAMINO", descripcion="Pedido en camino al cliente", orden=4, es_terminal=False),
-    EstadoPedido(codigo="ENTREGADO", descripcion="Pedido entregado al cliente", orden=5, es_terminal=True),
-    EstadoPedido(codigo="CANCELADO", descripcion="Pedido cancelado", orden=6, es_terminal=True),
+    EstadoPedido(codigo="PENDIENTE", descripcion="Pedido creado, pago pendiente", orden=1, es_terminal=False),
+    EstadoPedido(codigo="CONFIRMADO", descripcion="Pago procesado y confirmado", orden=2, es_terminal=False),
+    EstadoPedido(codigo="EN_PREP", descripcion="En preparación en cocina", orden=3, es_terminal=False),
+    EstadoPedido(codigo="ENTREGADO", descripcion="Entrega confirmada", orden=4, es_terminal=True),
+    EstadoPedido(codigo="CANCELADO", descripcion="Pedido cancelado", orden=5, es_terminal=True),
 ]
+
 def seed_estados_pedido(session: Session):
     for estado in ESTADOS_PEDIDO_SEED:
         existing = session.get(EstadoPedido, estado.codigo)
