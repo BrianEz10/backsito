@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status
 from app.core.database import SessionDep
 from app.core.deps import require_role
 from app.modules.auth.models import Usuario
-from app.modules.admin.schemas import AdminUserOut, AdminUserUpdate, AdminAsignarRolesRequest
+from app.modules.admin.schemas import AdminUserOut, AdminUserUpdate, AdminAsignarRolesRequest, DashboardResponse
 from app.modules.admin.service import AdminService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -30,6 +30,11 @@ def actualizar_usuario(id: int, data: AdminUserUpdate, _admin: Annotated[Usuario
 @router.patch("/usuarios/{id}/roles", response_model=AdminUserOut)
 def asignar_roles(id: int, data: AdminAsignarRolesRequest, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], svc: AdminService = Depends(get_admin_service)) -> AdminUserOut:
     return svc.asignar_roles(id, data)
+
+
+@router.get("/dashboard", response_model=DashboardResponse)
+def dashboard(_admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], svc: AdminService = Depends(get_admin_service)) -> DashboardResponse:
+    return svc.get_dashboard()
 
 
 @router.delete("/usuarios/{id}", status_code=status.HTTP_204_NO_CONTENT)
