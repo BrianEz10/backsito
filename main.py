@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 from app.core.config import settings
 from app.core.database import engine
-from app.modules.health.router import router as health_router
 from app.modules.auth.router import router as auth_router
 from app.modules.categorias.router import router as categorias_router
 from app.modules.ingredientes.router import router as ingredientes_router
@@ -39,6 +38,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+@app.get("/")
+def root():
+    return {"status": "ok", "app": "Food Store API", "docs": "/docs"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins= settings.CORS_ORIGINS,
@@ -47,7 +50,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(health_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(categorias_router, prefix="/api/v1")
 app.include_router(ingredientes_router, prefix="/api/v1")
