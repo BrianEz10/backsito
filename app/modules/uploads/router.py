@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, status
 from typing import Annotated
 from app.core.deps import require_role
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.modules.uploads.schemas import CloudinaryResponse
 from app.modules.uploads.service import UploadService
 

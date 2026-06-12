@@ -3,7 +3,7 @@ from app.core.base import Base
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.modules.auth.models import Usuario
+    from app.modules.usuarios.models import Usuario
 
 class DireccionEntrega(Base, table=True):
     __tablename__: str = "direcciones_entrega"

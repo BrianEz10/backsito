@@ -3,7 +3,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from fastapi import Response
 from sqlmodel import Session
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
 from app.modules.auth.uow import AuthUnitOfWork
 from app.modules.auth.refresh_models import RefreshToken

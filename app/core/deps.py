@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException, status, Request
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 from app.core.database import SessionDep
-from app.modules.auth.models import Usuario
+from app.modules.usuarios.models import Usuario
 from app.core.security import decode_access_token
 
 async def get_current_user(request: Request, session: SessionDep) -> Usuario:

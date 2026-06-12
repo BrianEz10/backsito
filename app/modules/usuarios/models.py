@@ -1,14 +1,14 @@
 from sqlmodel import Field, Relationship
 from app.core.base import Base
-from typing import TYPE_CHECKING
 from app.modules.roles.associations import UsuarioRol
 from app.modules.roles.models import Rol
 from app.modules.direcciones.models import DireccionEntrega
 
+
 class Usuario(Base, table=True):
     __tablename__ = "usuarios"
 
-    email: str = Field(unique = True)
+    email: str = Field(unique=True)
     nombre: str
     apellido: str
     celular: str | None = None
