@@ -9,6 +9,7 @@ from app.modules.ingredientes.service import IngredienteService
 
 router = APIRouter(prefix="/ingredientes", tags=["ingredientes"])
 
+
 def get_ingrediente_service(session: SessionDep) -> IngredienteService:
     return IngredienteService(session)
 

@@ -37,11 +37,14 @@ async def lifespan(app: FastAPI):
         )
     yield
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 @app.get("/")
 def root():
     return {"status": "ok", "app": "Food Store API", "docs": "/docs"}
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,7 +54,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 app.add_middleware(RateLimitMiddleware)
+
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(categorias_router, prefix="/api/v1")

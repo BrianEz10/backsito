@@ -2,15 +2,18 @@ from sqlmodel import SQLModel, Field
 from app.modules.categorias.schemas import CategoriaOut
 from app.modules.ingredientes.schemas import IngredienteOut
 
+
 class CategoriaEnProducto(SQLModel):
     categoria_id: int
     es_principal: bool = False
+
 
 class IngredienteEnProducto(SQLModel):
     ingrediente_id: int
     cantidad: float = 0
     unidad_medida_id: int
     es_removible: bool = False
+
 
 class ProductoCreate(SQLModel):
     nombre: str = Field(max_length=150)
@@ -23,6 +26,7 @@ class ProductoCreate(SQLModel):
     categorias: list[CategoriaEnProducto] = []
     ingredientes: list[IngredienteEnProducto] = []
 
+
 class ProductoUpdate(SQLModel):
     nombre: str | None = Field(default=None, max_length=150)
     descripcion: str | None = None
@@ -34,6 +38,7 @@ class ProductoUpdate(SQLModel):
     categorias: list[CategoriaEnProducto] | None = None
     ingredientes: list[IngredienteEnProducto] | None = None
 
+
 class ProductoOut(SQLModel):
     id: int
     nombre: str
@@ -44,8 +49,10 @@ class ProductoOut(SQLModel):
     disponible: bool = True
     unidad_venta_id: int | None = None
 
+
 class DisponibilidadRequest(SQLModel):
     disponible: bool
+
 
 class PaginatedProductos(SQLModel):
     items: list[ProductoOut]
@@ -53,6 +60,7 @@ class PaginatedProductos(SQLModel):
     page: int
     size: int
     pages: int
+
 
 class IngredienteEnProductoRequest(SQLModel):
     ingrediente_id: int
@@ -67,6 +75,7 @@ class ProductoIngredienteRead(SQLModel):
     cantidad: float
     unidad_medida_id: int
     es_removible: bool
+
 
 class ProductoDetail(SQLModel):
     id: int

@@ -5,8 +5,10 @@ from app.core.errors import http_error
 
 logger = logging.getLogger(__name__)
 
+
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
+
 
 class UploadService:
 
@@ -17,6 +19,7 @@ class UploadService:
     def _validate_file(self, file: UploadFile) -> None:
         if file.content_type not in ALLOWED_MIME_TYPES:
             raise http_error(400, f"Tipo de archivo no soportado: {file.content_type}. Permitidos: jpg, jpeg, png, webp", "INVALID_FILE", "file")
+
 
     def _validate_file_size(self, content: bytes) -> None:
         if len(content) > MAX_FILE_SIZE:

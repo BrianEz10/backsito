@@ -2,6 +2,7 @@ from sqlmodel import Field, ForeignKey, Relationship, SQLModel, Column, Integer,
 from app.core.base import Base
 from datetime import datetime, timezone
 
+
 class Pedido(Base, table=True):
     __tablename__ = "pedidos"
 
@@ -18,6 +19,7 @@ class Pedido(Base, table=True):
     detalles: list["DetallePedido"] = Relationship(back_populates="pedido")
     historial: list["HistorialEstadoPedido"] = Relationship(back_populates="pedido")
 
+
 class DetallePedido(SQLModel, table=True):
     __tablename__ = "detalles_pedido"
 
@@ -31,6 +33,7 @@ class DetallePedido(SQLModel, table=True):
     created_at: datetime = Field(nullable=False, default_factory=lambda: datetime.now(timezone.utc))
 
     pedido: Pedido = Relationship(back_populates="detalles")
+
 
 class HistorialEstadoPedido(SQLModel, table=True):
     __tablename__ = "historial_estados_pedido"

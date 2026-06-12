@@ -1,6 +1,7 @@
 from sqlmodel import Field
 from app.core.base import Base
 
+
 class UnidadMedida(Base, table=True):
     __tablename__: str = "unidad_medida"
 

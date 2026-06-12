@@ -12,6 +12,7 @@ class UsuarioService:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+
     def _user_to_out(self, user: Usuario) -> UsuarioOut:
         roles = [rol.codigo for rol in user.roles]
         return UsuarioOut(
@@ -24,6 +25,7 @@ class UsuarioService:
             created_at=user.created_at,
             deleted_at=user.deleted_at,
         )
+
 
     def listar(self, page: int = 1, size: int = 20, rol: str | None = None) -> PaginatedUsuarios:
         with UsuarioUnitOfWork(self._session) as uow:
@@ -43,6 +45,7 @@ class UsuarioService:
 
         return PaginatedUsuarios(items=result, total=total, page=page, size=size, pages=pages)
 
+
     def get_by_id(self, usuario_id: int) -> UsuarioOut:
         with UsuarioUnitOfWork(self._session) as uow:
             user = uow.usuarios.get_by_id(usuario_id)
@@ -50,6 +53,7 @@ class UsuarioService:
                 raise http_error(404, "Usuario no encontrado", "NOT_FOUND", "usuario_id")
             result = self._user_to_out(user)
         return result
+
 
     def update(self, usuario_id: int, data: UsuarioUpdate) -> UsuarioOut:
         with UsuarioUnitOfWork(self._session) as uow:
@@ -62,6 +66,7 @@ class UsuarioService:
             uow.usuarios.add(user)
             result = self._user_to_out(user)
         return result
+
 
     def asignar_roles(self, usuario_id: int, data: AsignarRolesRequest) -> UsuarioOut:
         with UsuarioUnitOfWork(self._session) as uow:
@@ -80,6 +85,7 @@ class UsuarioService:
                 uow._session.add(UsuarioRol(usuario_id=usuario_id, rol_codigo=rol_codigo))
             result = self._user_to_out(user)
         return result
+
 
     def delete(self, usuario_id: int, current_user_id: int) -> None:
         if usuario_id == current_user_id:

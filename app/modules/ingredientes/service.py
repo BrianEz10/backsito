@@ -5,16 +5,19 @@ from app.modules.ingredientes.schemas import IngredienteCreate, IngredienteUpdat
 from app.modules.ingredientes.uow import IngredienteUnitOfWork
 from app.core.errors import http_error
 
+
 class IngredienteService:
     def __init__(self, session: Session) -> None:
         self._session = session
     
+
     def _get_or_404(self, uow: IngredienteUnitOfWork, ingrediente_id: int) -> Ingrediente:
         ingrediente = uow.ingredientes.get_by_id(ingrediente_id)
         if not ingrediente:
             raise http_error(404, f"Ingrediente con id {ingrediente_id} no encontrado", "NOT_FOUND", "ingrediente_id")
         return ingrediente
     
+
     def create(self, data: IngredienteCreate) -> IngredienteOut:
         with IngredienteUnitOfWork(self._session) as uow:
             existing = uow.ingredientes.get_by_nombre(data.nombre)
@@ -24,19 +27,22 @@ class IngredienteService:
             uow.ingredientes.add(ingrediente)
             result = IngredienteOut.model_validate(ingrediente)
         return result
-
+    
+    
     def get_by_id(self, ingrediente_id: int) -> IngredienteOut:
         with IngredienteUnitOfWork(self._session) as uow:
             ingrediente = self._get_or_404(uow, ingrediente_id)
             result = IngredienteOut.model_validate(ingrediente)
         return result
     
+
     def get_all(self) -> list[IngredienteOut]:
         with IngredienteUnitOfWork(self._session) as uow:
             ingredientes = uow.ingredientes.get_all()
             result = [IngredienteOut.model_validate(i) for i in ingredientes]
         return result
     
+
     def update(self, ingrediente_id: int, data: IngredienteUpdate) -> IngredienteOut:
         with IngredienteUnitOfWork(self._session) as uow:
             ingrediente = self._get_or_404(uow, ingrediente_id)
@@ -47,6 +53,7 @@ class IngredienteService:
             result = IngredienteOut.model_validate(ingrediente)
         return result
     
+
     def delete(self, ingrediente_id: int) -> None:
         with IngredienteUnitOfWork(self._session) as uow:
             ingrediente = self._get_or_404(uow, ingrediente_id)
