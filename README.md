@@ -56,12 +56,20 @@ Este es un sistema de pedidos de comida. El backend esta desarrollado con FastAP
         -Órdenes comerciales
     6- Guardamos los cambios
 
+## 5. Adjuntar las crendeciales de Prueba de Mercado Pago
 
-## 5. Abrimos una terminal para levantar el proyecto con Docker.
+    1- Inicia sesion en https://www.mercadopago.com.ar/developers
+    2- Ingresar a "Tu integración"--> "Crendenciales de prueba"
+    3- Ahora tenemos nuestras 2 credenciales "Public Key" y el "Access Token"
+    4- Luego nos dirigimos a nuestro archivo creado ".env" y pegamos alli las credenciales en su lugar correspondiente.
+    5- Guardamos los cambios
+
+
+## 6. Abrimos una terminal para levantar el proyecto con Docker.
 
     docker compose up --build
 
-## 6. Ingresamos al swagger para ver los endpoints.
+## 7. Ingresamos al swagger para ver los endpoints.
 
     http://localhost:8000/docs
 
