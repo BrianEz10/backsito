@@ -94,6 +94,7 @@ FORMAS_PAGO_SEED = [
     FormaPago(codigo="MERCADOPAGO", descripcion="Pago con Mercado Pago (tarjeta/QR)", habilitado=True),
     FormaPago(codigo="TRANSFERENCIA", descripcion="Transferencia bancaria", habilitado=True),
 ]
+
 def seed_formas_pago(session: Session):
     for fp in FORMAS_PAGO_SEED:
         existing = session.get(FormaPago, fp.codigo)
