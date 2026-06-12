@@ -1,7 +1,7 @@
 from sqlmodel import Field, Relationship
 from app.core.base import Base
 from app.modules.productos.associations import ProductoCategoria
-from typing import TYPE_CHECKING #Para que no rompa los el Pylance
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.modules.productos.models import Producto

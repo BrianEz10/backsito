@@ -2,11 +2,13 @@ from sqlmodel import Field, Relationship, Column
 from sqlalchemy import ARRAY, String
 from app.core.base import Base
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
-from typing import TYPE_CHECKING #Para que no rompa los  el Pylance
+from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from app.modules.categorias.models import Categoria
     from app.modules.ingredientes.models import Ingrediente
+
 
 class Producto(Base, table=True):
     __tablename__: str = "productos"

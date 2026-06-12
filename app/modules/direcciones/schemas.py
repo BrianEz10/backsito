@@ -1,5 +1,6 @@
 from sqlmodel import SQLModel
 
+
 class DireccionCreate(SQLModel):
     alias: str | None = None
     linea1: str
@@ -11,6 +12,7 @@ class DireccionCreate(SQLModel):
     longitud: float | None = None
     es_principal: bool = False
 
+
 class DireccionUpdate(SQLModel):
     alias: str | None = None
     linea1: str | None = None
@@ -21,6 +23,7 @@ class DireccionUpdate(SQLModel):
     latitud: float | None = None
     longitud: float | None = None
     es_principal: bool | None = None
+
 
 class DireccionOut(SQLModel):
     id: int

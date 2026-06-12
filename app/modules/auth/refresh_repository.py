@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from sqlmodel import select
 from app.core.repository import BaseRepository
 from app.modules.auth.refresh_models import RefreshToken

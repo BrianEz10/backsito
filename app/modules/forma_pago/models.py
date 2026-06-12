@@ -1,5 +1,6 @@
 from sqlmodel import Field, SQLModel
 
+
 class FormaPago(SQLModel, table=True):
     __tablename__: str = "formas_pago"
 

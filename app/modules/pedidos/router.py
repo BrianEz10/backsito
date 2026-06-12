@@ -8,7 +8,9 @@ from app.modules.pedidos.schemas import HistorialOut, PedidoCreate, PedidoOut, A
 from app.modules.pedidos.service import PedidoService
 from app.core.ws_manager import manager
 
+
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
+
 
 def get_pedido_service(session: SessionDep) -> PedidoService:
     return PedidoService(session)
