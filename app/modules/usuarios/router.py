@@ -23,7 +23,6 @@ def listar_usuarios(_admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))]
 def obtener_usuario(id: int, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], svc: UsuarioService = Depends(get_usuario_service)) -> UsuarioOut:
     return svc.get_by_id(id)
 
-#Preguntar sobre si hace falta crear un update para el perfil del usuario.
 
 @router.patch("/{id}", response_model=UsuarioOut)
 def actualizar_usuario(id: int, data: UsuarioUpdate, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], svc: UsuarioService = Depends(get_usuario_service)) -> UsuarioOut:

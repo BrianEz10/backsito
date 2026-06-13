@@ -53,11 +53,7 @@ async def cancelar_pedido(id: int, current_user: CurrentUser, svc: PedidoService
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    token: str = Query(...),
-    pedido_id: int | None = Query(None),
-):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), pedido_id: int | None = Query(None)):
     payload = decode_access_token(token)
     if not payload:
         await websocket.close(code=1008, reason="Token inválido o expirado")

@@ -1,5 +1,4 @@
 from sqlmodel import Session
-from datetime import datetime, timezone
 from app.modules.ingredientes.models import Ingrediente
 from app.modules.ingredientes.schemas import IngredienteCreate, IngredienteUpdate, IngredienteOut
 from app.modules.ingredientes.uow import IngredienteUnitOfWork
@@ -57,4 +56,4 @@ class IngredienteService:
     def delete(self, ingrediente_id: int) -> None:
         with IngredienteUnitOfWork(self._session) as uow:
             ingrediente = self._get_or_404(uow, ingrediente_id)
-            ingrediente.deleted_at = datetime.now(timezone.utc)
+            uow.ingredientes.soft_delete(ingrediente)

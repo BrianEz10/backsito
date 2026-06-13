@@ -248,4 +248,4 @@ class PedidoService:
     def delete(self, pedido_id: int) -> None:
         with PedidoUnitOfWork(self._session) as uow:
             pedido = self._get_or_404(uow, pedido_id)
-            pedido.deleted_at = datetime.now(timezone.utc)
+            uow.pedidos.soft_delete(pedido)

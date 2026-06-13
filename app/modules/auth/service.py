@@ -12,8 +12,6 @@ from app.core.security import hash_password, verify_password, create_access_toke
 from app.core.config import settings
 from app.core.errors import http_error
 
-#Este AuthService(rehacer) duplica su lógica, cambiar manga de giles.
-
 
 class AuthService:
     def __init__(self, session: Session) -> None:
@@ -21,7 +19,7 @@ class AuthService:
         self._refresh_expire_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
     def _utcnow(self) -> datetime:
-        return datetime.now(timezone.utc).replace(tzinfo=None) 
+        return datetime.now(timezone.utc)
     
     def _hash_token(self, token_str: str) -> str:
         return hashlib.sha256(token_str.encode()).hexdigest()
@@ -53,7 +51,7 @@ class AuthService:
         roles = [rol.codigo for rol in user.roles]
         return create_access_token({"sub": user.email, "roles": roles})
     
-    def register(self, data: RegisterRequest, response: Response) -> dict:
+    def register(self, data: RegisterRequest, response: Response) -> TokenResponse:
         with AuthUnitOfWork(self._session) as uow:
             existing = uow.usuarios.get_by_email(data.email)
             if existing:
@@ -79,7 +77,7 @@ class AuthService:
             expires_in=expires_in,
         )
     
-    def login(self, data: LoginRequest, response: Response) -> dict:
+    def login(self, data: LoginRequest, response: Response) -> TokenResponse:
         with AuthUnitOfWork(self._session) as uow:
             user = uow.usuarios.get_by_email(data.email)
             if not user or not verify_password(data.password, user.hashed_password):
@@ -104,6 +102,8 @@ class AuthService:
             token.revoked_at = now_utc
             new_refresh_str = self._create_refresh_token(uow, token.usuario_id)
             user = uow.usuarios.get_by_id(token.usuario_id)
+            if not user or user.deleted_at is not None:
+                raise http_error(401, "Usuario no encontrado", "UNAUTHORIZED")
             access_token = self.create_token(user)
         self._set_auth_cookies(response, access_token, new_refresh_str)
         expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60

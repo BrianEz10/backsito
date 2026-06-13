@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlmodel import Session, select
 from app.modules.usuarios.models import Usuario
@@ -94,4 +93,4 @@ class UsuarioService:
             user = uow.usuarios.get_by_id(usuario_id)
             if not user or user.deleted_at is not None:
                 raise http_error(404, "Usuario no encontrado", "NOT_FOUND", "usuario_id")
-            user.deleted_at = datetime.now(timezone.utc)
+            uow.usuarios.soft_delete(user)

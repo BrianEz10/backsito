@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlmodel import Session, select
 from app.modules.ingredientes.schemas import IngredienteOut
@@ -202,4 +201,4 @@ class ProductoService:
     def delete(self, producto_id: int) -> None:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
-            producto.deleted_at = datetime.now(timezone.utc)
+            uow.productos.soft_delete(producto)
