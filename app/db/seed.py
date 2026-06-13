@@ -13,6 +13,7 @@ ROLES_SEED = [
     Rol(codigo="ADMIN", nombre="Administrador", descripcion="Acceso total sin reestricciones"),
     Rol(codigo="STOCK", nombre="Stock", descripcion="Actualiza stock y disponible"),
     Rol(codigo="PEDIDOS", nombre="Pedidos", descripcion="Avanza estados de CONFIRMADO a ENTREGADO"),
+    Rol(codigo="CAJERO", nombre="Cajero", descripcion="Crea pedidos desde el punto de venta"),
     Rol(codigo="CLIENT", nombre="Cliente", descripcion="Opera solo sus propios datos")
 ]
 

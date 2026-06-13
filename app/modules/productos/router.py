@@ -4,7 +4,7 @@ from app.core.database import SessionDep
 from app.core.deps import require_role
 from app.modules.usuarios.models import Usuario
 from app.modules.productos.schemas import DisponibilidadRequest, IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
-from app.modules.ingredientes.schemas import IngredienteOut
+from app.modules.productos.schemas import IngredientePersonalizadoOut
 from app.modules.productos.service import ProductoService
 from app.modules.uploads.schemas import ImagenProductoUpdate
 
@@ -23,8 +23,8 @@ def obtener(id: int, svc: ProductoService = Depends(get_producto_service)) -> Pr
     return svc.get_by_id(id)
 
 
-@router.get("/{id}/ingredientes", response_model=list[IngredienteOut])
-def listar_ingredientes(id: int, svc: ProductoService = Depends(get_producto_service)) -> list[IngredienteOut]:
+@router.get("/{id}/ingredientes", response_model=list[IngredientePersonalizadoOut])
+def listar_ingredientes(id: int, svc: ProductoService = Depends(get_producto_service)) -> list[IngredientePersonalizadoOut]:
     return svc.get_ingredientes(id)
 
 
