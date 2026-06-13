@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from sqlmodel import Session, select
 from app.modules.categorias.models import Categoria
 from app.modules.categorias.schemas import CategoriaCreate, CategoriaUpdate, CategoriaOut, CategoriaWithHijos
@@ -80,4 +79,4 @@ class CategoriaService:
             ).first()
             if productos_asociados:
                 raise http_error(409, "No se puede eliminar: tiene productos asociados", "BAD_REQUEST")
-            categoria.deleted_at = datetime.now(timezone.utc)
+            uow.categorias.soft_delete(categoria)

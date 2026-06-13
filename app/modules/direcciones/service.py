@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from sqlmodel import Session
 from app.modules.direcciones.models import DireccionEntrega
 from app.modules.direcciones.schemas import DireccionCreate, DireccionUpdate, DireccionOut
@@ -59,4 +58,4 @@ class DireccionService:
     def delete(self, usuario_id: int, direccion_id: int) -> None:
         with DireccionUnitOfWork(self._session) as uow:
             direccion = self._get_mia_or_404(uow, usuario_id, direccion_id)
-            direccion.deleted_at = datetime.now(timezone.utc)
+            uow.direcciones.soft_delete(direccion)
