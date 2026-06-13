@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime, timezone
 
+
 class UsuarioRol(SQLModel, table=True):
     __tablename__: str = "usuario_rol"
 

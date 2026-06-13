@@ -3,6 +3,7 @@ from app.core.deps import SessionDep, CurrentUser
 from app.modules.direcciones.schemas import DireccionCreate, DireccionUpdate, DireccionOut
 from app.modules.direcciones.service import DireccionService
 
+
 router = APIRouter(tags=["Mis Direcciones"])
 
 def get_direccion_service(session: SessionDep) -> DireccionService:

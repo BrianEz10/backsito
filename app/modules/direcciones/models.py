@@ -1,4 +1,4 @@
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
 from app.core.base import Base
 from typing import TYPE_CHECKING
 

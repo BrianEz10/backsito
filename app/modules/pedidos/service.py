@@ -20,9 +20,11 @@ TRANSICIONES_VALIDAS = {
     "CANCELADO":  [],
 }
 
+
 ROLES_ADMIN_PEDIDOS = ["ADMIN", "PEDIDOS"]
 ROLES_SIN_DIRECCION = ["ADMIN", "CAJERO"]  
 COSTO_ENVIO = 50.00
+
 
 EVENTOS_WS = {
     "CONFIRMADO": "PEDIDO_CONFIRMADO",
@@ -30,10 +32,12 @@ EVENTOS_WS = {
     "ENTREGADO": "PEDIDO_ENTREGADO",
     "CANCELADO": "PEDIDO_CANCELADO",
 }
-    
+
+
 class PedidoService:
     def __init__(self, session: Session) -> None:
         self._session = session
+
 
     def _get_or_404(self, uow: PedidoUnitOfWork, pedido_id: int) -> Pedido:
         pedido = uow.pedidos.get_by_id(pedido_id)
@@ -41,6 +45,7 @@ class PedidoService:
             raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
         return pedido
     
+
     def _pedido_to_out(self, pedido: Pedido) -> PedidoOut:
         ing_ids = set()
         for d in pedido.detalles:
@@ -87,6 +92,7 @@ class PedidoService:
             ) for h in pedido.historial],
         )
     
+
     def create(self, data: PedidoCreate, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             subtotal = 0.0
@@ -156,6 +162,7 @@ class PedidoService:
             result = self._pedido_to_out(pedido)
         return result
     
+
     def get_all(self, usuario_id: int, roles: list[str], page: int = 1, size: int = 20) -> PaginatedPedidos:
         with PedidoUnitOfWork(self._session) as uow:
             stmt = select(Pedido).where(Pedido.deleted_at == None)
@@ -174,6 +181,7 @@ class PedidoService:
 
         return PaginatedPedidos(items=result, total=total, page=page, size=size, pages=pages)
 
+
     def get_by_id(self, pedido_id: int, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             pedido = uow.pedidos.get_by_id(pedido_id)
@@ -184,6 +192,7 @@ class PedidoService:
                 raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
             result = self._pedido_to_out(pedido)
         return result
+
 
     def get_historial(self, pedido_id: int, usuario_id: int, roles: list[str]) -> list[HistorialOut]:
         with PedidoUnitOfWork(self._session) as uow:
@@ -198,6 +207,7 @@ class PedidoService:
             ).all()
             result = [HistorialOut.model_validate(h) for h in historial]
         return result
+
 
     async def avanzar_estado(self, pedido_id: int, data: AvanceEstadoRequest, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
@@ -248,6 +258,7 @@ class PedidoService:
         await manager.broadcast_pedido(pedido_id, evento)
 
         return result
+
 
     def delete(self, pedido_id: int) -> None:
         with PedidoUnitOfWork(self._session) as uow:

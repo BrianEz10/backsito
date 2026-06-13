@@ -8,10 +8,13 @@ from app.modules.productos.schemas import IngredientePersonalizadoOut
 from app.modules.productos.service import ProductoService
 from app.modules.uploads.schemas import ImagenProductoUpdate
 
+
 router = APIRouter(prefix="/productos", tags=["productos"])
+
 
 def get_producto_service(session: SessionDep) -> ProductoService:
     return ProductoService(session)
+
 
 @router.get("/", response_model=PaginatedProductos)
 def listar(categoria_id: int | None = Query(default=None), disponible: bool | None = Query(default=None), buscar: str | None = Query(default=None), page: int = Query(default=1, ge=1), size: int = Query(default=20, ge=1, le=100), svc: ProductoService = Depends(get_producto_service)) -> PaginatedProductos:

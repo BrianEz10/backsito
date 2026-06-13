@@ -1,6 +1,6 @@
 from sqlmodel import Field
 from app.core.base import Base
-from datetime import datetime, timezone
+from datetime import datetime
 
 class RefreshToken(Base, table=True):
     __tablename__ = "refresh_tokens"

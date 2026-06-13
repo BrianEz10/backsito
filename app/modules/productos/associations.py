@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field
 
+
 class ProductoCategoria(SQLModel, table=True):
     __tablename__: str = "producto_categoria"
 
@@ -12,6 +13,7 @@ class ProductoCategoria(SQLModel, table=True):
     )
     es_principal: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 
 class ProductoIngrediente(SQLModel, table=True):
     __tablename__: str = "producto_ingrediente"

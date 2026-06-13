@@ -17,12 +17,14 @@ class ProductoService:
     def __init__(self, session: Session) -> None:
         self._session = session
     
+
     def _get_or_404(self, uow: ProductoUnitOfWork, producto_id: int) -> Producto:
         producto = uow.productos.get_by_id(producto_id)
         if not producto:
             raise http_error(404, "Producto no encontrado", "NOT_FOUND", "producto_id")
         return producto
     
+
     def create(self, data: ProductoCreate) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
             producto = Producto(**data.model_dump(exclude={"categorias", "ingredientes"}))
@@ -61,6 +63,7 @@ class ProductoService:
             result = ProductoOut.model_validate(producto)
         return result
     
+
     def get_all(self, categoria_id: int | None = None, disponible: bool | None = None,
                 buscar: str | None = None, page: int = 1, size: int = 20) -> PaginatedProductos:
         with ProductoUnitOfWork(self._session) as uow:
@@ -84,6 +87,7 @@ class ProductoService:
             pages = (total + size - 1) // size
 
         return PaginatedProductos(items=result, total=total, page=page, size=size, pages=pages)
+
 
     def get_by_id(self, producto_id: int) -> ProductoDetail:
         with ProductoUnitOfWork(self._session) as uow:
@@ -138,6 +142,7 @@ class ProductoService:
             ]
         return result
 
+
     def agregar_ingrediente(self, producto_id: int, data: IngredienteEnProductoRequest) -> ProductoIngredienteRead:
         with ProductoUnitOfWork(self._session) as uow:
             self._get_or_404(uow, producto_id)
@@ -162,6 +167,7 @@ class ProductoService:
                 es_removible=data.es_removible,
             )
         return result
+
 
     def update(self, producto_id: int, data: ProductoUpdate) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
@@ -214,6 +220,7 @@ class ProductoService:
             result = ProductoOut.model_validate(producto)
         return result
     
+
     def update_imagenes(self, producto_id: int, imagenes_url: list[str]) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
@@ -221,12 +228,14 @@ class ProductoService:
             result = ProductoOut.model_validate(producto)
         return result
     
+
     def toggle_disponibilidad(self, producto_id: int, disponible: bool) -> ProductoOut:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
             producto.disponible = disponible
             result = ProductoOut.model_validate(producto)
         return result
+    
     
     def delete(self, producto_id: int) -> None:
         with ProductoUnitOfWork(self._session) as uow:

@@ -1,5 +1,6 @@
 from sqlmodel import Field, SQLModel
 
+
 class EstadoPedido(SQLModel, table=True):
     __tablename__: str = "estados_pedido"
 
