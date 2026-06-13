@@ -16,7 +16,7 @@ def register(data: RegisterRequest, response: Response, svc: AuthService = Depen
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service))  -> TokenResponse:
+def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service)) -> TokenResponse:
     return svc.login(data, response)
 
 
@@ -30,6 +30,7 @@ def me(user: CurrentUser) -> UserResponse:
         apellido=user.apellido,
         celular=user.celular,
         roles=roles,
+        created_at=user.created_at, 
     )
 
 

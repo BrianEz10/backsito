@@ -76,6 +76,11 @@ class ProductoIngredienteRead(SQLModel):
     unidad_medida_id: int
     es_removible: bool
 
+class IngredientePersonalizadoOut(SQLModel):
+    id: int
+    nombre: str
+    es_alergeno: bool
+    es_removible: bool
 
 class ProductoDetail(SQLModel):
     id: int
@@ -87,4 +92,4 @@ class ProductoDetail(SQLModel):
     disponible: bool = True
     unidad_venta_id: int | None = None
     categorias: list[CategoriaOut] = []
-    ingredientes: list[IngredienteOut] = []
+    ingredientes: list[IngredientePersonalizadoOut] = []

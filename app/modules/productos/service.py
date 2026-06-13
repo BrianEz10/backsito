@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlmodel import Session, select
+from app.modules.categorias.schemas import CategoriaOut
 from app.modules.ingredientes.schemas import IngredienteOut
 from app.modules.productos.models import Producto
-from app.modules.productos.schemas import IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.productos.schemas import IngredienteEnProductoRequest, IngredientePersonalizadoOut, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
 from app.modules.productos.uow import ProductoUnitOfWork
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
 from app.modules.categorias.models import Categoria
@@ -91,16 +92,53 @@ class ProductoService:
     def get_by_id(self, producto_id: int) -> ProductoDetail:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
-            result = ProductoDetail.model_validate(producto)
+            categorias = [CategoriaOut.model_validate(c) for c in producto.categorias]
+            stmt = (
+                select(Ingrediente, ProductoIngrediente.es_removible)
+                .join(ProductoIngrediente, Ingrediente.id == ProductoIngrediente.ingrediente_id)
+                .where(ProductoIngrediente.producto_id == producto_id)
+            )
+            rows = uow.productos.session.exec(stmt).all()
+            ingredientes = [
+                IngredientePersonalizadoOut(
+                    id=ing.id,
+                    nombre=ing.nombre,
+                    es_alergeno=ing.es_alergeno,
+                    es_removible=es_removible,
+                )
+                for ing, es_removible in rows
+            ]
+            result = ProductoDetail(
+                id=producto.id,
+                nombre=producto.nombre,
+                descripcion=producto.descripcion,
+                precio_base=producto.precio_base,
+                imagenes_url=producto.imagenes_url,
+                stock_cantidad=producto.stock_cantidad,
+                disponible=producto.disponible,
+                unidad_venta_id=producto.unidad_venta_id,
+                categorias=categorias,
+                ingredientes=ingredientes,
+            )
         return result
     
-
-    def get_ingredientes(self, producto_id: int) -> list[IngredienteOut]:
+    def get_ingredientes(self, producto_id: int) -> list[IngredientePersonalizadoOut]:
         with ProductoUnitOfWork(self._session) as uow:
-            producto = self._get_or_404(uow, producto_id)
+            self._get_or_404(uow, producto_id)
+            stmt = (
+                select(Ingrediente, ProductoIngrediente.es_removible)
+                .join(ProductoIngrediente, Ingrediente.id == ProductoIngrediente.ingrediente_id)
+                .where(ProductoIngrediente.producto_id == producto_id)
+            )
+            rows = uow.productos.session.exec(stmt).all()
             result = [
-                IngredienteOut.model_validate(ing)
-                for ing in producto.ingredientes
+                IngredientePersonalizadoOut(
+                    id=ing.id,
+                    nombre=ing.nombre,
+                    es_alergeno=ing.es_alergeno,
+                    es_removible=es_removible,
+                )
+                for ing, es_removible in rows
             ]
         return result
 

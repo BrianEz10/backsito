@@ -11,6 +11,7 @@ class ItemPedidoRequest(SQLModel):
 class PedidoCreate(SQLModel):
     direccion_id: int | None = None
     forma_pago_codigo: str
+    nombre_para: str | None = None
     notas: str | None = None
     items: list[ItemPedidoRequest]
 
@@ -23,6 +24,7 @@ class DetallePedidoOut(SQLModel):
     precio_snapshot: float
     subtotal_snap: float
     personalizacion: list[int] | None = None
+    personalizacion_nombres: list[str] | None = None
     created_at: datetime
 
 
@@ -41,6 +43,7 @@ class PedidoOut(SQLModel):
     direccion_id: int | None = None
     estado_codigo: str
     forma_pago_codigo: str
+    nombre_para: str | None = None
     subtotal: float
     descuento: float
     costo_envio: float
