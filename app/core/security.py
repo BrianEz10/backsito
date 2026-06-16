@@ -14,7 +14,18 @@ def verify_password(plain: str, hashed: str) -> bool:
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"type": "access", "exp": expire})
+
+    roles = to_encode.get("roles")
+    if roles is None:
+        roles = []
+    elif isinstance(roles, str):
+        roles = [roles]
+    else:
+        roles = list(roles)
+    to_encode["roles"] = roles
+
+    to_encode["type"] = "access"
+    to_encode["exp"] = int(expire.timestamp())
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def decode_access_token(token: str) -> dict | None:

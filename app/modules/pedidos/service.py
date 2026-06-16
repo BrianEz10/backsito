@@ -102,7 +102,7 @@ class PedidoService:
         )
     
 
-    def create(self, data: PedidoCreate, usuario_id: int, roles: list[str]) -> PedidoOut:
+    async def create(self, data: PedidoCreate, usuario_id: int, roles: list[str]) -> PedidoOut:
         with PedidoUnitOfWork(self._session) as uow:
             subtotal = 0.0
             detalles = []
@@ -130,6 +130,8 @@ class PedidoService:
             fp = uow.pedidos.session.get(FormaPago, data.forma_pago_codigo)
             if not fp:
                 raise http_error(400, f"Forma de pago '{data.forma_pago_codigo}' no existe", "NOT_FOUND", "forma_pago_codigo")
+            if any(r in ["CAJERO", "ADMIN", "PEDIDOS"] for r in roles) and data.direccion_id is None:
+                data.metodo_envio = "RETIRO"
             if data.direccion_id is not None:
                 dir_entrega = uow.pedidos.session.get(DireccionEntrega, data.direccion_id)
                 if not dir_entrega or dir_entrega.usuario_id != usuario_id:
@@ -168,6 +170,16 @@ class PedidoService:
             uow.pedidos.session.add(historial)
 
             result = self._pedido_to_out(pedido)
+
+        evento = {
+            "event": EVENTOS_WS.get("PENDIENTE", "PEDIDO_CREADO"),
+            "pedido_id": pedido.id,
+            "estado_nuevo": "PENDIENTE",
+            "usuario_id": usuario_id,
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+        }
+        await manager.broadcast_pedido(pedido.id, evento, usuario_id)
+
         return result
     
 
@@ -251,6 +263,7 @@ class PedidoService:
                 motivo=data.motivo,
             )
             uow.pedidos.session.add(historial)
+            pedido_usuario_id = pedido.usuario_id
             result = self._pedido_to_out(pedido)
 
 
@@ -263,7 +276,7 @@ class PedidoService:
             "motivo": data.motivo,
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         }
-        await manager.broadcast_pedido(pedido_id, evento)
+        await manager.broadcast_pedido(pedido_id, evento, pedido_usuario_id)
 
         return result
 

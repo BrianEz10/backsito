@@ -18,7 +18,11 @@ from app.modules.pagos.router import router as pagos_router
 from app.modules.uploads.router import router as uploads_router
 from app.modules.usuarios.router import router as usuarios_router
 from app.core.rate_limit.rate_limit_middleware import RateLimitMiddleware
+from app.core.logging_config import setup_logging
+from app.core.exception_handlers import register_exception_handlers
+from app.core.timing_middleware import TimingMiddleware
 
+setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,11 +45,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/")
-def root():
-    return {"status": "ok", "app": "Food Store API", "docs": "/docs"}
+register_exception_handlers(app)
 
 
+app.add_middleware(TimingMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins= settings.CORS_ORIGINS,
@@ -55,7 +59,12 @@ app.add_middleware(
 )
 
 
-app.add_middleware(RateLimitMiddleware)
+
+
+
+@app.get("/")
+def root():
+    return {"status": "ok", "app": "Food Store API", "docs": "/docs"}
 
 
 app.include_router(auth_router, prefix="/api/v1")
