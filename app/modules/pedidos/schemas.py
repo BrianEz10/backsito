@@ -1,5 +1,6 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
+from app.modules.direcciones.schemas import DireccionOut
 
 
 class ItemPedidoRequest(SQLModel):
@@ -9,6 +10,7 @@ class ItemPedidoRequest(SQLModel):
 
 
 class PedidoCreate(SQLModel):
+    metodo_envio: str = "DOMICILIO"
     direccion_id: int | None = None
     forma_pago_codigo: str
     nombre_para: str | None = None
@@ -43,6 +45,7 @@ class PedidoOut(SQLModel):
     direccion_id: int | None = None
     estado_codigo: str
     forma_pago_codigo: str
+    metodo_envio: str
     nombre_para: str | None = None
     subtotal: float
     descuento: float
@@ -50,6 +53,7 @@ class PedidoOut(SQLModel):
     total: float
     notas: str | None = None
     created_at: datetime
+    direccion: DireccionOut | None = None
     detalles: list[DetallePedidoOut] = []
     historial: list[HistorialOut] = []
 
