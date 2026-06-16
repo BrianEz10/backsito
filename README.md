@@ -78,7 +78,7 @@ Este es un sistema de pedidos de comida. El backend esta desarrollado con FastAP
 
 ## Al iniciar el servidor se crean automaticamente:
 
-    - **Roles**: ADMIN, STOCK, PEDIDOS, CLIENT
+    - **Roles**: ADMIN, STOCK, CAJERO, PEDIDOS, CLIENT
     - **Estado de pedido**: PENDIENTE, CONFIRMADO, EN_PREP, ENTREGADO, CANCELADO
     - **Formas de pago**: MERCADO_PAGO, EFECTIVO, TRANSFERENCIA
     - **Unidades de medida**: kg, g, mL, ud, porciones
