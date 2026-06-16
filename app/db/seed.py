@@ -91,7 +91,7 @@ def seed_estados_pedido(session: Session):
 #Estados predefinidos de FormaPago
 
 FORMAS_PAGO_SEED = [
-    FormaPago(codigo="EFECTIVO", descripcion="Pago en efectivo al retirar", habilitado=True),
+    FormaPago(codigo="EFECTIVO", descripcion="Pago en efectivo", habilitado=True),
     FormaPago(codigo="MERCADOPAGO", descripcion="Pago con Mercado Pago (tarjeta/QR)", habilitado=True),
     FormaPago(codigo="TRANSFERENCIA", descripcion="Transferencia bancaria", habilitado=True),
 ]

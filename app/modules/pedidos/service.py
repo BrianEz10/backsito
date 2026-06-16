@@ -5,6 +5,7 @@ from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, DetallePedidoOu
 from app.modules.pedidos.uow import PedidoUnitOfWork
 from app.modules.productos.models import Producto
 from app.modules.direcciones.models import DireccionEntrega
+from app.modules.direcciones.schemas import DireccionOut
 from app.modules.forma_pago.models import FormaPago
 from app.modules.ingredientes.models import Ingrediente
 from app.core.ws_manager import manager
@@ -22,7 +23,7 @@ TRANSICIONES_VALIDAS = {
 
 
 ROLES_ADMIN_PEDIDOS = ["ADMIN", "PEDIDOS"]
-ROLES_SIN_DIRECCION = ["ADMIN", "CAJERO"]  
+METODOS_SIN_DIRECCION = ["RETIRO"]
 COSTO_ENVIO = 50.00
 
 
@@ -58,12 +59,20 @@ class PedidoService:
             ).all()
             for ing in ingredients:
                 ing_map[ing.id] = ing.nombre
+        direccion_out = None
+        if pedido.direccion_id is not None:
+            dir_entrega = self._session.get(DireccionEntrega, pedido.direccion_id)
+            if dir_entrega:
+                direccion_out = DireccionOut.model_validate(dir_entrega)
+
         return PedidoOut(
             id=pedido.id,
             usuario_id=pedido.usuario_id,
             direccion_id=pedido.direccion_id,
+            direccion=direccion_out,
             estado_codigo=pedido.estado_codigo,
             forma_pago_codigo=pedido.forma_pago_codigo,
+            metodo_envio=pedido.metodo_envio,
             subtotal=pedido.subtotal,
             descuento=pedido.descuento,
             costo_envio=pedido.costo_envio,
@@ -121,22 +130,21 @@ class PedidoService:
             fp = uow.pedidos.session.get(FormaPago, data.forma_pago_codigo)
             if not fp:
                 raise http_error(400, f"Forma de pago '{data.forma_pago_codigo}' no existe", "NOT_FOUND", "forma_pago_codigo")
-            puede_sin_direccion = any(r in ROLES_SIN_DIRECCION for r in roles)
             if data.direccion_id is not None:
                 dir_entrega = uow.pedidos.session.get(DireccionEntrega, data.direccion_id)
                 if not dir_entrega or dir_entrega.usuario_id != usuario_id:
                     raise http_error(400, "Dirección de entrega no válida", "BAD_REQUEST", "direccion_id")
-            elif not puede_sin_direccion:
+            elif data.metodo_envio not in METODOS_SIN_DIRECCION:
                 raise http_error(400, "Dirección de entrega requerida", "BAD_REQUEST", "direccion_id")
-            
 
-            costo_envio = 0 if data.direccion_id is None else COSTO_ENVIO
+            costo_envio = 0 if data.metodo_envio in METODOS_SIN_DIRECCION else COSTO_ENVIO
             total = subtotal + costo_envio
             pedido = Pedido(
                 usuario_id=usuario_id,
                 direccion_id=data.direccion_id,
                 estado_codigo="PENDIENTE",
                 forma_pago_codigo=data.forma_pago_codigo,
+                metodo_envio=data.metodo_envio,
                 nombre_para=data.nombre_para,
                 subtotal=subtotal,
                 descuento=0.00,

@@ -10,6 +10,7 @@ class Pedido(Base, table=True):
     direccion_id: int | None = Field(default=None, foreign_key="direcciones_entrega.id")
     estado_codigo: str = Field(foreign_key="estados_pedido.codigo", nullable=False)
     forma_pago_codigo: str = Field(foreign_key="formas_pago.codigo", nullable=False)
+    metodo_envio: str = Field(nullable=False, default="DOMICILIO")
     nombre_para: str | None = None
     subtotal: float = Field(nullable=False)
     descuento: float = Field(default=0.00, nullable=False)
