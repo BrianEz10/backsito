@@ -1,5 +1,6 @@
 from sqlalchemy import func
 from sqlmodel import Session, select
+from app.modules.categorias.schemas import CategoriaOut
 from app.modules.ingredientes.schemas import IngredienteOut
 from app.modules.productos.models import Producto
 from app.modules.productos.schemas import IngredienteEnProductoOut, IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
@@ -107,13 +108,23 @@ class ProductoService:
             result.ingredientes = ingredientes
         return result
     
-
-    def get_ingredientes(self, producto_id: int) -> list[IngredienteOut]:
+    def get_ingredientes(self, producto_id: int) -> list[IngredientePersonalizadoOut]:
         with ProductoUnitOfWork(self._session) as uow:
-            producto = self._get_or_404(uow, producto_id)
+            self._get_or_404(uow, producto_id)
+            stmt = (
+                select(Ingrediente, ProductoIngrediente.es_removible)
+                .join(ProductoIngrediente, Ingrediente.id == ProductoIngrediente.ingrediente_id)
+                .where(ProductoIngrediente.producto_id == producto_id)
+            )
+            rows = uow.productos.session.exec(stmt).all()
             result = [
-                IngredienteOut.model_validate(ing)
-                for ing in producto.ingredientes
+                IngredientePersonalizadoOut(
+                    id=ing.id,
+                    nombre=ing.nombre,
+                    es_alergeno=ing.es_alergeno,
+                    es_removible=es_removible,
+                )
+                for ing, es_removible in rows
             ]
         return result
 

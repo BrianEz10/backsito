@@ -6,6 +6,7 @@ from app.modules.pedidos.uow import PedidoUnitOfWork
 from app.modules.productos.models import Producto
 from app.modules.direcciones.models import DireccionEntrega
 from app.modules.forma_pago.models import FormaPago
+from app.modules.ingredientes.models import Ingrediente
 from app.core.ws_manager import manager
 from sqlalchemy import func
 from app.core.errors import http_error
@@ -46,6 +47,17 @@ class PedidoService:
     
 
     def _pedido_to_out(self, pedido: Pedido) -> PedidoOut:
+        ing_ids = set()
+        for d in pedido.detalles:
+            if d.personalizacion:
+                ing_ids.update(d.personalizacion)
+        ing_map: dict[int, str] = {}
+        if ing_ids:
+            ingredients = self._session.exec(
+                select(Ingrediente).where(Ingrediente.id.in_(ing_ids))
+            ).all()
+            for ing in ingredients:
+                ing_map[ing.id] = ing.nombre
         return PedidoOut(
             id=pedido.id,
             usuario_id=pedido.usuario_id,
@@ -56,6 +68,7 @@ class PedidoService:
             descuento=pedido.descuento,
             costo_envio=pedido.costo_envio,
             total=pedido.total,
+            nombre_para=pedido.nombre_para,
             notas=pedido.notas,
             created_at=pedido.created_at,
             detalles=[DetallePedidoOut(
@@ -66,6 +79,7 @@ class PedidoService:
                 precio_snapshot=d.precio_snapshot,
                 subtotal_snap=d.subtotal_snap,
                 personalizacion=d.personalizacion,
+                personalizacion_nombres=[ing_map[i] for i in d.personalizacion if i in ing_map] if d.personalizacion else None,
                 created_at=d.created_at,
             ) for d in pedido.detalles],
             historial=[HistorialOut(
@@ -123,6 +137,7 @@ class PedidoService:
                 direccion_id=data.direccion_id,
                 estado_codigo="PENDIENTE",
                 forma_pago_codigo=data.forma_pago_codigo,
+                nombre_para=data.nombre_para,
                 subtotal=subtotal,
                 descuento=0.00,
                 costo_envio=costo_envio,

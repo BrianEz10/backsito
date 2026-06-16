@@ -16,7 +16,7 @@ def register(data: RegisterRequest, response: Response, svc: AuthService = Depen
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service))  -> TokenResponse:
+def login(response: Response, data: LoginRequest, svc: AuthService = Depends(get_auth_service)) -> TokenResponse:
     return svc.login(data, response)
 
 

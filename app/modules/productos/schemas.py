@@ -76,6 +76,11 @@ class ProductoIngredienteRead(SQLModel):
     unidad_medida_id: int
     es_removible: bool
 
+class IngredientePersonalizadoOut(SQLModel):
+    id: int
+    nombre: str
+    es_alergeno: bool
+    es_removible: bool
 
 class IngredienteEnProductoOut(IngredienteOut):
     es_removible: bool = False
