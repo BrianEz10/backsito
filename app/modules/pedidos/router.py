@@ -17,9 +17,9 @@ def get_pedido_service(session: SessionDep) -> PedidoService:
 
 
 @router.post("/", response_model=PedidoOut, status_code=status.HTTP_201_CREATED)
-def crear(data: PedidoCreate, current_user: Annotated[Usuario, Depends(require_role(["CLIENT", "CAJERO", "ADMIN", "PEDIDOS"]))], svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
+async def crear(data: PedidoCreate, current_user: Annotated[Usuario, Depends(require_role(["CLIENT", "CAJERO", "ADMIN", "PEDIDOS"]))], svc: PedidoService = Depends(get_pedido_service)) -> PedidoOut:
     roles = [rol.codigo for rol in current_user.roles]
-    return svc.create(data, current_user.id, roles)
+    return await svc.create(data, current_user.id, roles)
 
 
 @router.get("/", response_model=PaginatedPedidos)
@@ -60,9 +60,10 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), pedi
         return
 
     roles: list[str] = payload.get("roles", [])
-    is_admin = any(r in ("ADMIN", "PEDIDOS") for r in roles)
+    is_admin = any(r in ("ADMIN", "PEDIDOS", "CAJERO") for r in roles)
+    usuario_id: int | None = payload.get("usuario_id")
 
-    channel = str(pedido_id) if pedido_id else ("admin" if is_admin else "user:unknown")
+    channel = str(pedido_id) if pedido_id else ("admin" if is_admin else f"user:{usuario_id}" if usuario_id else "user:unknown")
     await manager.connect(websocket, channel)
 
     try:

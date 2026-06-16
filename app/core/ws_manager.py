@@ -23,10 +23,12 @@ class ConnectionManager:
                 del self.connections[channel]
             logger.info(f"Desconectado del canal {channel}")
 
-    async def broadcast_pedido(self, pedido_id: int, evento: dict[str, Any]) -> None:
+    async def broadcast_pedido(self, pedido_id: int, evento: dict[str, Any], usuario_id: int | None = None) -> None:
         channel = str(pedido_id)
         await self._broadcast_to_channel(channel, evento)
         await self._broadcast_to_channel("admin", evento)
+        if usuario_id is not None:
+            await self._broadcast_to_channel(f"user:{usuario_id}", evento)
 
     async def broadcast_to_role(self, rol: str, evento: dict[str, Any]) -> None:
         await self._broadcast_to_channel(rol, evento)

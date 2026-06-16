@@ -49,7 +49,7 @@ class AuthService:
     
     def create_token(self, user: Usuario) -> str:
         roles = [rol.codigo for rol in user.roles]
-        return create_access_token({"sub": user.email, "roles": roles})
+        return create_access_token({"sub": user.email, "roles": roles, "usuario_id": user.id})
     
     def register(self, data: RegisterRequest, response: Response) -> TokenResponse:
         with AuthUnitOfWork(self._session) as uow:
@@ -96,9 +96,20 @@ class AuthService:
         with AuthUnitOfWork(self._session) as uow:
             token_hash = self._hash_token(refresh_token_str)
             token = uow.refresh_tokens.get_by_token_hash(token_hash)
+
+
             now_utc = self._utcnow()
-            if not token or token.expires_at < now_utc or token.revoked_at is not None:
+
+            if not token:
                 raise http_error(401, "Refresh token invalido o expirado", "INVALID_CREDENTIALS")
+
+            expires_at = token.expires_at
+            if expires_at is not None and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+            if expires_at < now_utc or token.revoked_at is not None:
+                raise http_error(401, "Refresh token invalido o expirado", "INVALID_CREDENTIALS")
+
             token.revoked_at = now_utc
             new_refresh_str = self._create_refresh_token(uow, token.usuario_id)
             user = uow.usuarios.get_by_id(token.usuario_id)
