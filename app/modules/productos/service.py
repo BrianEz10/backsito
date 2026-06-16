@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from app.modules.categorias.schemas import CategoriaOut
 from app.modules.ingredientes.schemas import IngredienteOut
 from app.modules.productos.models import Producto
-from app.modules.productos.schemas import IngredienteEnProductoOut, IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.productos.schemas import IngredienteEnProductoOut, IngredienteEnProductoRequest, IngredientePersonalizadoOut, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
 from app.modules.productos.uow import ProductoUnitOfWork
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
 from app.modules.categorias.models import Categoria
