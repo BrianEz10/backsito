@@ -56,6 +56,14 @@ class DireccionService:
             result = DireccionOut.model_validate(direccion)
         return result
     
+    def admin_get_by_id(self, direccion_id: int) -> DireccionOut:
+        with DireccionUnitOfWork(self._session) as uow:
+            direccion = uow.direcciones.get_by_id(direccion_id)
+            if not direccion:
+                raise http_error(404, "Direccion no encontrada", "NOT_FOUND")
+            result = DireccionOut.model_validate(direccion)
+        return result
+
     def delete(self, usuario_id: int, direccion_id: int) -> None:
         with DireccionUnitOfWork(self._session) as uow:
             direccion = self._get_mia_or_404(uow, usuario_id, direccion_id)

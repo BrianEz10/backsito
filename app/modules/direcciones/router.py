@@ -1,13 +1,24 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, status
-from app.core.deps import SessionDep, CurrentUser
+from app.core.deps import SessionDep, CurrentUser, require_role
 from app.modules.direcciones.schemas import DireccionCreate, DireccionUpdate, DireccionOut
 from app.modules.direcciones.service import DireccionService
+from app.modules.usuarios.models import Usuario
 
 
 router = APIRouter(tags=["Mis Direcciones"])
 
 def get_direccion_service(session: SessionDep) -> DireccionService:
     return DireccionService(session)
+
+
+@router.get("/admin/direcciones/{direccion_id}", response_model=DireccionOut)
+def admin_obtener_direccion(
+    direccion_id: int,
+    _admin: Annotated[Usuario, Depends(require_role(["ADMIN", "PEDIDOS"]))],
+    svc: DireccionService = Depends(get_direccion_service),
+) -> DireccionOut:
+    return svc.admin_get_by_id(direccion_id)
 
 
 @router.get("/mis-direcciones", response_model=list[DireccionOut])
