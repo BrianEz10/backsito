@@ -10,8 +10,13 @@ from app.core.errors import http_error
 async def get_current_user(request: Request, session: SessionDep) -> Usuario:
     token = request.cookies.get("access_token")
     if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
         raise http_error(401, "No autenticado", "UNAUTHORIZED")
     payload = decode_access_token(token)
+
     if payload is None:
         raise http_error(401, "Token invalido", "UNAUTHORIZED")
     email: str = payload.get("sub")

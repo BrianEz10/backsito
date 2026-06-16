@@ -27,3 +27,6 @@ class Producto(Base, table=True):
     ingredientes: list["Ingrediente"] = Relationship(
         back_populates="productos", link_model=ProductoIngrediente
     )
+    producto_ingredientes: list["ProductoIngrediente"] = Relationship(
+        back_populates="producto"
+    )

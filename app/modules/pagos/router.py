@@ -47,7 +47,7 @@ def confirm_payment(data: ConfirmarPagoRequest, svc: PaymentService = Depends(ge
 @router.get("/redirect/{pedido_id}/{status}")
 async def redirect_after_pago(pedido_id: int, status: str, request: Request):
 
-    frontend_url = settings.CORS_ORIGINS[0] if isinstance(settings.CORS_ORIGINS, list) else "http://localhost:5173"
+    frontend_url = settings.FRONTEND_URL
     qs = request.url.query
     url = f"{frontend_url}/orders/{pedido_id}/{status}"
     if qs:

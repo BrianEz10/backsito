@@ -2,7 +2,7 @@ import uuid
 import logging
 from datetime import datetime
 from typing import Optional
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.config import settings
 from app.modules.pedidos.models import Pedido, HistorialEstadoPedido
 from app.modules.pagos.models import Pago
@@ -46,8 +46,9 @@ class PaymentService:
                 "external_reference": str(pedido_id),
                 "back_urls": back_urls,
                 "notification_url": (
-                    settings.MP_NOTIFICATION_URL
-                    or "http://localhost:8000/api/v1/pagos/webhook"
+                    f"{settings.MP_NOTIFICATION_URL}/api/v1/pagos/webhook"
+                    if settings.MP_NOTIFICATION_URL
+                    else "http://localhost:8000/api/v1/pagos/webhook"
                 ),
                 "auto_return": "approved",
             }
@@ -175,7 +176,7 @@ class PaymentService:
         if not pago_mp_id:
             return {"status": "ignored", "reason": "No payment ID"}
 
-        if topic not in (None, "payment", "merchant_order"):
+        if topic not in (None, "payment"):
             return {"status": "ignored", "reason": f"Topic: {topic}"}
 
         try:
@@ -214,7 +215,9 @@ class PaymentService:
                 pago.updated_at = datetime.utcnow()
 
                 if nuevo_estado == "aprobado":
-                    pedido = self._session.get(Pedido, pago.pedido_id)
+                    pedido = self._session.exec(
+                        select(Pedido).where(Pedido.id == pago.pedido_id).with_for_update()
+                    ).first()
                     if pedido and pedido.estado_codigo == "PENDIENTE":
                         historial = HistorialEstadoPedido(
                             pedido_id=pedido.id,
@@ -239,7 +242,9 @@ class PaymentService:
 
     def confirmar_pago(self, pedido_id: int, payment_id: Optional[int] = None) -> PagoEstadoResponse:
 
-        pedido = self._session.get(Pedido, pedido_id)
+        pedido = self._session.exec(
+            select(Pedido).where(Pedido.id == pedido_id).with_for_update()
+        ).first()
 
         if not pedido:
             raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")

@@ -1,5 +1,11 @@
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field
+from typing import TYPE_CHECKING
+from sqlmodel import Relationship, SQLModel, Field
+
+
+if TYPE_CHECKING:
+    from app.modules.productos.models import Producto
+    from app.modules.ingredientes.models import Ingrediente
 
 
 class ProductoCategoria(SQLModel, table=True):
@@ -24,3 +30,5 @@ class ProductoIngrediente(SQLModel, table=True):
     unidad_medida_id: int = Field(default=None, foreign_key="unidad_medida.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     es_removible: bool = Field(default=False)
+    producto: "Producto" = Relationship(back_populates="producto_ingredientes")
+    ingrediente: "Ingrediente" = Relationship(back_populates="producto_ingredientes")

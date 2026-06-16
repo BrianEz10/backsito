@@ -2,7 +2,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 from app.modules.ingredientes.schemas import IngredienteOut
 from app.modules.productos.models import Producto
-from app.modules.productos.schemas import IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
+from app.modules.productos.schemas import IngredienteEnProductoOut, IngredienteEnProductoRequest, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
 from app.modules.productos.uow import ProductoUnitOfWork
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
 from app.modules.categorias.models import Categoria
@@ -91,6 +91,20 @@ class ProductoService:
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
             result = ProductoDetail.model_validate(producto)
+            
+            ingredientes = []
+            for pi in producto.producto_ingredientes:
+                ing = IngredienteEnProductoOut(
+                    id=pi.ingrediente.id,
+                    nombre=pi.ingrediente.nombre,
+                    descripcion=pi.ingrediente.descripcion,
+                    es_alergeno=pi.ingrediente.es_alergeno,
+                    stock_cantidad=pi.ingrediente.stock_cantidad,
+                    es_removible=pi.es_removible,
+                )
+                ingredientes.append(ing)
+            
+            result.ingredientes = ingredientes
         return result
     
 

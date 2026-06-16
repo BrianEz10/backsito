@@ -30,6 +30,7 @@ def me(user: CurrentUser) -> UserResponse:
         apellido=user.apellido,
         celular=user.celular,
         roles=roles,
+        created_at=user.created_at
     )
 
 

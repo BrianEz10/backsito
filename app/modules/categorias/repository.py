@@ -14,7 +14,7 @@ class CategoriaRepository(BaseRepository[Categoria]):
     
     def get_by_name(self, nombre: str) -> Categoria | None:
         return self.session.exec(
-            select(Categoria).where(Categoria.nombre == nombre)
+            select(Categoria).where(Categoria.nombre == nombre, Categoria.deleted_at == None)
         ).first()
     
     def get_all(self, offset: int = 0, limit: int = 20) -> list[Categoria]:

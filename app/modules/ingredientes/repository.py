@@ -14,10 +14,11 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         ).first()
     
 
-    def get_all(self, offset: int = 0, limit: int = 20) -> list[Ingrediente]:
+    def get_all(self, offset: int = 0, limit: int = 200) -> list[Ingrediente]:
         return list(
             self.session.exec(
                 select(Ingrediente).where(Ingrediente.deleted_at == None)
+                .order_by(Ingrediente.id)
                 .offset(offset).limit(limit)
             ).all()
         )

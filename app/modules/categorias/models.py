@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 class Categoria(Base, table = True):
     __tablename__: str = "categorias"
 
-    nombre: str = Field(unique = True)
+    nombre: str
     descripcion: str | None = None
     imagen_url: str | None = None
     parent_id: int | None = Field(default = None, foreign_key = "categorias.id")

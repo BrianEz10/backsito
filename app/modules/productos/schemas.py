@@ -77,6 +77,10 @@ class ProductoIngredienteRead(SQLModel):
     es_removible: bool
 
 
+class IngredienteEnProductoOut(IngredienteOut):
+    es_removible: bool = False
+
+
 class ProductoDetail(SQLModel):
     id: int
     nombre: str
@@ -87,4 +91,4 @@ class ProductoDetail(SQLModel):
     disponible: bool = True
     unidad_venta_id: int | None = None
     categorias: list[CategoriaOut] = []
-    ingredientes: list[IngredienteOut] = []
+    ingredientes: list[IngredienteEnProductoOut] = []
