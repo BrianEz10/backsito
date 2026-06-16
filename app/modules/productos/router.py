@@ -42,7 +42,7 @@ def agregar_ingrediente(id: int, data: IngredienteEnProductoRequest, _admin: Ann
 
 
 @router.put("/{id}", response_model=ProductoOut)
-def actualizar(id: int, _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))], data: ProductoUpdate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
+def actualizar(id: int, _admin: Annotated[Usuario, Depends(require_role(["ADMIN","STOCK"]))], data: ProductoUpdate, svc: ProductoService = Depends(get_producto_service)) -> ProductoOut:
     return svc.update(id, data)
 
 
