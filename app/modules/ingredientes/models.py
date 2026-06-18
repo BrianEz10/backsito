@@ -17,7 +17,10 @@ class Ingrediente(Base, table=True):
     stock_cantidad: int = Field(default=0, ge=0)
 
     productos: list["Producto"] = Relationship(
-        back_populates="ingredientes", link_model=ProductoIngrediente
+        back_populates="ingredientes", link_model=ProductoIngrediente,
+        sa_relationship_kwargs={"overlaps": "ingrediente,producto"},
     )
     producto_ingredientes: list["ProductoIngrediente"] = Relationship(
-        back_populates="ingrediente")
+        back_populates="ingrediente",
+        sa_relationship_kwargs={"overlaps": "productos"},
+    )
