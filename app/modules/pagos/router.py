@@ -33,15 +33,15 @@ async def webhook(request: Request, svc: PaymentService = Depends(get_payment_se
             data = await request.json()
         else:
             data = dict(await request.form())
-        return svc.procesar_webhook(data, query_params=query_params)
+        return await svc.procesar_webhook(data, query_params=query_params)
     except Exception as e:
         logger.exception("Error en webhook MP")
         return {"status": "error", "reason": str(e)}
 
 
 @router.post("/confirm", response_model=PagoEstadoResponse)
-def confirm_payment(data: ConfirmarPagoRequest, svc: PaymentService = Depends(get_payment_service)):
-    return svc.confirmar_pago(data.pedido_id, data.payment_id)
+async def confirm_payment(data: ConfirmarPagoRequest, svc: PaymentService = Depends(get_payment_service)):
+    return await svc.confirmar_pago(data.pedido_id, data.payment_id)
 
 
 @router.get("/redirect/{pedido_id}/{status}")
