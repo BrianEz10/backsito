@@ -1,8 +1,9 @@
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Session, select
+from app.core.ws_manager import manager
 from app.core.config import settings
 from app.modules.pedidos.models import Pedido, HistorialEstadoPedido
 from app.modules.pagos.models import Pago
@@ -155,7 +156,7 @@ class PaymentService:
                 public_key=self._get_mp_public_key(),
             )
 
-    def procesar_webhook(self, data: dict, query_params: Optional[dict] = None) -> dict:
+    async def procesar_webhook(self, data: dict, query_params: Optional[dict] = None) -> dict:
 
         logger.info("Webhook recibido: data=%s qs=%s", data, query_params or {})
 
@@ -229,6 +230,16 @@ class PaymentService:
                         pedido.estado_codigo = "CONFIRMADO"
                         self._session.add(historial)
 
+                        evento = {
+                            "event": "PEDIDO_CONFIRMADO",
+                            "pedido_id": pedido.id,
+                            "estado_anterior": "PENDIENTE",
+                            "estado_nuevo": "CONFIRMADO",
+                            "usuario_id": pedido.usuario_id,
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                        }
+                        await manager.broadcast_pedido(pedido.id, evento, pedido.usuario_id)
+
             return {
                 "status": "processed",
                 "pago_id": pago.id,
@@ -240,7 +251,7 @@ class PaymentService:
             logger.exception("Error procesando webhook MP")
             return {"status": "error", "reason": str(e)}
 
-    def confirmar_pago(self, pedido_id: int, payment_id: Optional[int] = None) -> PagoEstadoResponse:
+    async def confirmar_pago(self, pedido_id: int, payment_id: Optional[int] = None) -> PagoEstadoResponse:
 
         pedido = self._session.exec(
             select(Pedido).where(Pedido.id == pedido_id).with_for_update()
@@ -295,6 +306,16 @@ class PaymentService:
                         )
                         pedido.estado_codigo = "CONFIRMADO"
                         self._session.add(historial)
+
+                        evento = {
+                            "event": "PEDIDO_CONFIRMADO",
+                            "pedido_id": pedido.id,
+                            "estado_anterior": "PENDIENTE",
+                            "estado_nuevo": "CONFIRMADO",
+                            "usuario_id": pedido.usuario_id,
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                        }
+                        await manager.broadcast_pedido(pedido.id, evento, pedido.usuario_id)
 
             return PagoEstadoResponse(estado=nuevo_estado, pedido_id=pedido_id)
 
