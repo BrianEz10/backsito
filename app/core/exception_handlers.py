@@ -36,7 +36,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("💥 Error no manejado en [%s] %s", request.method, request.url.path)
+    logger.exception("Error no manejado en [%s] %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno del servidor", "code": "INTERNAL_ERROR", "field": None},
