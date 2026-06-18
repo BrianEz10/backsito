@@ -172,7 +172,7 @@ class PaymentService:
         if not topic and query_params:
             topic = query_params.get("topic") or query_params.get("type")
 
-        pago_mp_id = payment_id or data_id
+        pago_mp_id = data_id or payment_id
 
         if not pago_mp_id:
             return {"status": "ignored", "reason": "No payment ID"}
