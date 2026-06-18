@@ -25,8 +25,10 @@ class Producto(Base, table=True):
         back_populates="productos", link_model=ProductoCategoria
     )
     ingredientes: list["Ingrediente"] = Relationship(
-        back_populates="productos", link_model=ProductoIngrediente
+        back_populates="productos", link_model=ProductoIngrediente,
+        sa_relationship_kwargs={"overlaps": "producto,ingrediente,producto_ingredientes"},
     )
     producto_ingredientes: list["ProductoIngrediente"] = Relationship(
-        back_populates="producto"
+        back_populates="producto",
+        sa_relationship_kwargs={"overlaps": "ingredientes,productos"},
     )

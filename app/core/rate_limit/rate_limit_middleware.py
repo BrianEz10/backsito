@@ -22,7 +22,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        self.auth_limiter = RateLimiter(capacity=5, refill_rate_per_minute=1)
+        self.auth_limiter = RateLimiter(capacity=5, refill_rate_per_minute=1/3)
 
     async def dispatch(
         self,
