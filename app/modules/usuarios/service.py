@@ -1,7 +1,5 @@
-from sqlalchemy import func
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.modules.usuarios.models import Usuario
-from app.modules.roles.associations import UsuarioRol
 from app.modules.usuarios.schemas import PaginatedUsuarios, UsuarioOut, UsuarioUpdate, AsignarRolesRequest
 from app.modules.usuarios.uow import UsuarioUnitOfWork
 from app.core.errors import http_error
