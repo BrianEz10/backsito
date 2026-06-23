@@ -1,15 +1,10 @@
 from datetime import datetime, timezone
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.modules.pedidos.models import Pedido, DetallePedido, HistorialEstadoPedido
 from app.modules.pedidos.schemas import PedidoCreate, PedidoOut, DetallePedidoOut, HistorialOut, AvanceEstadoRequest, PaginatedPedidos
 from app.modules.pedidos.uow import PedidoUnitOfWork
-from app.modules.productos.models import Producto
-from app.modules.direcciones.models import DireccionEntrega
 from app.modules.direcciones.schemas import DireccionOut
-from app.modules.forma_pago.models import FormaPago
-from app.modules.ingredientes.models import Ingrediente
 from app.core.ws_manager import manager
-from sqlalchemy import func
 from app.core.errors import http_error
 
 
