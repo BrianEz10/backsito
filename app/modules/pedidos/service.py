@@ -45,23 +45,21 @@ class PedidoService:
         if not pedido:
             raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
         return pedido
-    
 
-    def _pedido_to_out(self, pedido: Pedido) -> PedidoOut:
+
+    def _pedido_to_out(self, pedido: Pedido, uow: PedidoUnitOfWork) -> PedidoOut:
         ing_ids = set()
         for d in pedido.detalles:
             if d.personalizacion:
                 ing_ids.update(d.personalizacion)
         ing_map: dict[int, str] = {}
         if ing_ids:
-            ingredients = self._session.exec(
-                select(Ingrediente).where(Ingrediente.id.in_(ing_ids))
-            ).all()
+            ingredients = uow.ingredientes.get_by_ids(ing_ids)
             for ing in ingredients:
                 ing_map[ing.id] = ing.nombre
         direccion_out = None
         if pedido.direccion_id is not None:
-            dir_entrega = self._session.get(DireccionEntrega, pedido.direccion_id)
+            dir_entrega = uow.direcciones.get_by_id(pedido.direccion_id)
             if dir_entrega:
                 direccion_out = DireccionOut.model_validate(dir_entrega)
 
@@ -107,7 +105,7 @@ class PedidoService:
             subtotal = 0.0
             detalles = []
             for item in data.items:
-                producto = uow.pedidos.session.get(Producto, item.producto_id)
+                producto = uow.productos.get_by_id(item.producto_id)
                 if not producto or producto.deleted_at is not None:
                     raise http_error(404, f"Producto {item.producto_id} no encontrado", "NOT_FOUND", "producto_id")
                 if producto.stock_cantidad < item.cantidad:
@@ -127,13 +125,13 @@ class PedidoService:
                 )
                 detalles.append(detalle)
 
-            fp = uow.pedidos.session.get(FormaPago, data.forma_pago_codigo)
+            fp = uow.pedidos.get_forma_pago(data.forma_pago_codigo)
             if not fp:
                 raise http_error(400, f"Forma de pago '{data.forma_pago_codigo}' no existe", "NOT_FOUND", "forma_pago_codigo")
             if any(r in ["CAJERO", "ADMIN", "PEDIDOS"] for r in roles) and data.direccion_id is None:
                 data.metodo_envio = "RETIRO"
             if data.direccion_id is not None:
-                dir_entrega = uow.pedidos.session.get(DireccionEntrega, data.direccion_id)
+                dir_entrega = uow.direcciones.get_by_id(data.direccion_id)
                 if not dir_entrega or dir_entrega.usuario_id != usuario_id:
                     raise http_error(400, "Dirección de entrega no válida", "BAD_REQUEST", "direccion_id")
             elif data.metodo_envio not in METODOS_SIN_DIRECCION:
@@ -158,7 +156,7 @@ class PedidoService:
 
             for d in detalles:
                 d.pedido_id = pedido.id
-                uow.pedidos.session.add(d)
+                uow.pedidos.add_detalle(d)
 
             historial = HistorialEstadoPedido(
                 pedido_id=pedido.id,
@@ -167,9 +165,9 @@ class PedidoService:
                 usuario_id=usuario_id,
                 motivo=None,
             )
-            uow.pedidos.session.add(historial)
+            uow.pedidos.add_historial_entry(historial)
 
-            result = self._pedido_to_out(pedido)
+            result = self._pedido_to_out(pedido, uow)
 
         evento = {
             "event": EVENTOS_WS.get("PENDIENTE", "PEDIDO_CREADO"),
@@ -185,20 +183,13 @@ class PedidoService:
 
     def get_all(self, usuario_id: int, roles: list[str], page: int = 1, size: int = 20) -> PaginatedPedidos:
         with PedidoUnitOfWork(self._session) as uow:
-            stmt = select(Pedido).where(Pedido.deleted_at == None)
-            if not any(r in ROLES_ADMIN_PEDIDOS for r in roles):
-                stmt = stmt.where(Pedido.usuario_id == usuario_id)
-            stmt = stmt.order_by(Pedido.created_at.desc())
-
-            total = uow.pedidos.session.exec(
-                select(func.count()).select_from(stmt.subquery())
-            ).one()
-
-            stmt = stmt.offset((page - 1) * size).limit(size)
-            pedidos = uow.pedidos.session.exec(stmt).all()
-            result = [self._pedido_to_out(p) for p in pedidos]
+            is_admin = any(r in ROLES_ADMIN_PEDIDOS for r in roles)
+            uid = None if is_admin else usuario_id
+            total = uow.pedidos.count_filtered(uid)
+            offset = (page - 1) * size
+            pedidos = uow.pedidos.find_all_filtered(uid, offset, size)
+            result = [self._pedido_to_out(p, uow) for p in pedidos]
             pages = (total + size - 1) // size
-
         return PaginatedPedidos(items=result, total=total, page=page, size=size, pages=pages)
 
 
@@ -210,7 +201,7 @@ class PedidoService:
             is_admin = any(r in ROLES_ADMIN_PEDIDOS for r in roles)
             if not is_admin and pedido.usuario_id != usuario_id:
                 raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
-            result = self._pedido_to_out(pedido)
+            result = self._pedido_to_out(pedido, uow)
         return result
 
 
@@ -220,11 +211,7 @@ class PedidoService:
             is_admin = any(r in ROLES_ADMIN_PEDIDOS for r in roles)
             if not is_admin and pedido.usuario_id != usuario_id:
                 raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
-            historial = uow.pedidos.session.exec(
-                select(HistorialEstadoPedido)
-                .where(HistorialEstadoPedido.pedido_id == pedido_id)
-                .order_by(HistorialEstadoPedido.created_at.asc())
-            ).all()
+            historial = uow.pedidos.get_historial_by_pedido(pedido_id)
             result = [HistorialOut.model_validate(h) for h in historial]
         return result
 
@@ -250,7 +237,7 @@ class PedidoService:
 
             if estado_destino == "CANCELADO":
                 for detalle in pedido.detalles:
-                    producto = uow.pedidos.session.get(Producto, detalle.producto_id)
+                    producto = uow.productos.get_by_id(detalle.producto_id)
                     if producto:
                         producto.stock_cantidad += detalle.cantidad
 
@@ -262,9 +249,9 @@ class PedidoService:
                 usuario_id=usuario_id,
                 motivo=data.motivo,
             )
-            uow.pedidos.session.add(historial)
+            uow.pedidos.add_historial_entry(historial)
             pedido_usuario_id = pedido.usuario_id
-            result = self._pedido_to_out(pedido)
+            result = self._pedido_to_out(pedido, uow)
 
 
         evento = {
