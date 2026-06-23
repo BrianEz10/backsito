@@ -25,6 +25,10 @@ class PedidoRepository(BaseRepository[Pedido]):
             select(Pedido).where(Pedido.id == id, Pedido.deleted_at == None)
             .with_for_update()
         ).first()
+    
+    #Para el "catalog_endpoints.py"
+    def get_all_formas_pago(self) -> list[FormaPago]:
+        return list(self.session.exec(select(FormaPago)).all())
 
 
     def get_by_usuario(self, usuario_id: int) -> list[Pedido]:

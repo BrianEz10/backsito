@@ -26,6 +26,13 @@ class ProductoRepository(BaseRepository[Producto]):
         return self.session.get(UnidadMedida, unidad_medida_id)
 
 
+    #Para el "catalog_endpoints.py"
+    def get_all_unidades_medida(self) -> list[UnidadMedida]:
+        return list(self.session.exec(
+            select(UnidadMedida).where(UnidadMedida.deleted_at.is_(None))
+        ).all())
+
+
     def count_by(self, categoria_id: int | None = None, disponible: bool | None = None, buscar: str | None = None) -> int:
         stmt = select(Producto).where(Producto.deleted_at == None)
         if categoria_id is not None:
