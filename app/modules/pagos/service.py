@@ -2,10 +2,10 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from typing import Optional
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.core.ws_manager import manager
 from app.core.config import settings
-from app.modules.pedidos.models import Pedido, HistorialEstadoPedido
+from app.modules.pedidos.models import HistorialEstadoPedido
 from app.modules.pagos.models import Pago
 from app.modules.pagos.schemas import PagoCrearResponse, PagoEstadoResponse
 from app.modules.pagos.uow import PagoUnitOfWork
