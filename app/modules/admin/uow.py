@@ -1,5 +1,6 @@
 from sqlmodel import Session
 from app.core.uow import UnitOfWork
+from app.modules.admin.repository import AdminRepository
 from app.modules.usuarios.repository import UsuarioRepository
 from app.modules.roles.repository import RolRepository
 
@@ -9,3 +10,4 @@ class AdminUnitOfWork(UnitOfWork):
         super().__init__(session)
         self.usuarios = UsuarioRepository(session)
         self.roles = RolRepository(session)
+        self.admin = AdminRepository(session)
