@@ -1,8 +1,7 @@
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.modules.categorias.models import Categoria
 from app.modules.categorias.schemas import CategoriaCreate, CategoriaUpdate, CategoriaOut, CategoriaWithHijos
 from app.modules.categorias.uow import CategoriaUnitOfWork
-from app.modules.productos.associations import ProductoCategoria
 from app.core.errors import http_error
 
 class CategoriaService:
@@ -33,13 +32,7 @@ class CategoriaService:
     
     def get_all(self, parent_id: int | None = None, offset: int = 0, limit: int = 20) -> list[CategoriaOut]:
         with CategoriaUnitOfWork(self._session) as uow:
-            stmt = select(Categoria).where(Categoria.deleted_at == None)
-            if parent_id == -1:
-                stmt = stmt.where(Categoria.parent_id == None)
-            elif parent_id is not None:
-                stmt = stmt.where(Categoria.parent_id == parent_id)
-            stmt = stmt.offset(offset).limit(limit).order_by(Categoria.id)
-            categorias = uow.categorias.session.exec(stmt).all()
+            categorias = uow.categorias.find_by_parent(parent_id, offset, limit)
             result = [CategoriaOut.model_validate(c) for c in categorias]
         return result
 
@@ -74,9 +67,7 @@ class CategoriaService:
     def delete(self, categoria_id: int) -> None:
         with CategoriaUnitOfWork(self._session) as uow:
             categoria = self._get_or_404(uow, categoria_id)
-            productos_asociados = uow.categorias.session.exec(
-                select(ProductoCategoria).where(ProductoCategoria.categoria_id == categoria_id)
-            ).first()
+            productos_asociados = uow.categorias.check_productos_asociados(categoria_id)
             if productos_asociados:
                 raise http_error(409, "No se puede eliminar: tiene productos asociados", "BAD_REQUEST")
             uow.categorias.soft_delete(categoria)

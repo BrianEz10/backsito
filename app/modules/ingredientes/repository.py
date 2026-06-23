@@ -28,3 +28,9 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         return self.session.exec(
             select(Ingrediente).where(Ingrediente.nombre == nombre)
         ).first()
+    
+
+    def get_by_ids(self, ids: set[int]) -> list[Ingrediente]:
+        return list(self.session.exec(
+            select(Ingrediente).where(Ingrediente.id.in_(ids))
+        ).all())

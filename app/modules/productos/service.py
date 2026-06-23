@@ -1,14 +1,8 @@
-from sqlalchemy import func
-from sqlmodel import Session, select
-from app.modules.categorias.schemas import CategoriaOut
-from app.modules.ingredientes.schemas import IngredienteOut
+from sqlmodel import Session
 from app.modules.productos.models import Producto
 from app.modules.productos.schemas import IngredienteEnProductoOut, IngredienteEnProductoRequest, IngredientePersonalizadoOut, ProductoCreate, ProductoDetail, ProductoIngredienteRead, ProductoUpdate, ProductoOut, PaginatedProductos
 from app.modules.productos.uow import ProductoUnitOfWork
 from app.modules.productos.associations import ProductoCategoria, ProductoIngrediente
-from app.modules.categorias.models import Categoria
-from app.modules.ingredientes.models import Ingrediente
-from app.modules.unidad_medida.models import UnidadMedida
 from app.core.errors import http_error
 
 
@@ -29,14 +23,14 @@ class ProductoService:
             producto = Producto(**data.model_dump(exclude={"categorias", "ingredientes"}))
             uow.productos.add(producto)
             if data.unidad_venta_id is not None:
-                um = uow.productos.session.get(UnidadMedida, data.unidad_venta_id)
+                um = uow.productos.get_unidad_medida(data.unidad_venta_id)
                 if not um:
                     raise http_error(400, "Unidad de medida no encontrada", "NOT_FOUND", "unidad_venta_id")
             principales = [c for c in data.categorias if c.es_principal]
             if len(principales) > 1:
                 raise http_error(400, "Solo puede haber una categoría principal por producto", "BAD_REQUEST", "categorias")
             for cat_data in data.categorias:
-                cat = uow.productos.session.get(Categoria, cat_data.categoria_id)
+                cat = uow.categorias.get_by_id(cat_data.categoria_id)
                 if not cat:
                     raise http_error(404, "Categoria no encontrada", "NOT_FOUND", "categoria_id")
                 link = ProductoCategoria(
@@ -44,9 +38,9 @@ class ProductoService:
                     categoria_id=cat_data.categoria_id,
                     es_principal=cat_data.es_principal,
                 )
-                uow.productos.session.add(link)
+                uow.productos.add(link)
             for ing_data in data.ingredientes:
-                ing = uow.productos.session.get(Ingrediente, ing_data.ingrediente_id)
+                ing = uow.ingredientes.get_by_id(ing_data.ingrediente_id)
                 if not ing:
                     raise http_error(404, "Ingrediente no encontrado", "NOT_FOUND", "ingrediente_id")
                 if ing_data.cantidad <= 0:
@@ -58,33 +52,18 @@ class ProductoService:
                     unidad_medida_id=ing_data.unidad_medida_id,
                     es_removible=ing_data.es_removible,
                 )
-                uow.productos.session.add(link)
+                uow.productos.add(link)
             result = ProductoOut.model_validate(producto)
         return result
     
 
-    def get_all(self, categoria_id: int | None = None, disponible: bool | None = None,
-                buscar: str | None = None, page: int = 1, size: int = 20) -> PaginatedProductos:
+    def get_all(self, categoria_id: int | None = None, disponible: bool | None = None, buscar: str | None = None, page: int = 1, size: int = 20) -> PaginatedProductos:
         with ProductoUnitOfWork(self._session) as uow:
-            stmt = select(Producto).where(Producto.deleted_at == None)
-            if categoria_id is not None:
-                stmt = stmt.join(ProductoCategoria).where(
-                    ProductoCategoria.categoria_id == categoria_id
-                ).distinct()
-            if disponible is not None:
-                stmt = stmt.where(Producto.disponible == disponible)
-            if buscar:
-                stmt = stmt.where(Producto.nombre.ilike(f"%{buscar}%"))
-
-            total = uow.productos.session.exec(
-                select(func.count()).select_from(stmt.subquery())
-            ).one()
-
-            stmt = stmt.offset((page - 1) * size).limit(size).order_by(Producto.id)
-            productos = uow.productos.session.exec(stmt).all()
+            total = uow.productos.count_by(categoria_id, disponible, buscar)
+            offset = (page - 1) * size
+            productos = uow.productos.find_by(categoria_id, disponible, buscar, offset, size)
             result = [ProductoOut.model_validate(p) for p in productos]
             pages = (total + size - 1) // size
-
         return PaginatedProductos(items=result, total=total, page=page, size=size, pages=pages)
 
 
@@ -111,12 +90,7 @@ class ProductoService:
     def get_ingredientes(self, producto_id: int) -> list[IngredientePersonalizadoOut]:
         with ProductoUnitOfWork(self._session) as uow:
             self._get_or_404(uow, producto_id)
-            stmt = (
-                select(Ingrediente, ProductoIngrediente.es_removible)
-                .join(ProductoIngrediente, Ingrediente.id == ProductoIngrediente.ingrediente_id)
-                .where(ProductoIngrediente.producto_id == producto_id)
-            )
-            rows = uow.productos.session.exec(stmt).all()
+            rows = uow.productos.get_ingredientes_detalle(producto_id)
             result = [
                 IngredientePersonalizadoOut(
                     id=ing.id,
@@ -132,7 +106,7 @@ class ProductoService:
     def agregar_ingrediente(self, producto_id: int, data: IngredienteEnProductoRequest) -> ProductoIngredienteRead:
         with ProductoUnitOfWork(self._session) as uow:
             self._get_or_404(uow, producto_id)
-            ing = uow.productos.session.get(Ingrediente, data.ingrediente_id)
+            ing = uow.ingredientes.get_by_id(data.ingrediente_id)
             if not ing:
                 raise http_error(404, "Ingrediente no encontrado", "NOT_FOUND", "ingrediente_id")
             if data.cantidad <= 0:
@@ -144,7 +118,7 @@ class ProductoService:
                 unidad_medida_id=data.unidad_medida_id,
                 es_removible=data.es_removible,
             )
-            uow.productos.session.add(link)
+            uow.productos.add(link)
             result = ProductoIngredienteRead(
                 producto_id=producto_id,
                 ingrediente_id=data.ingrediente_id,
@@ -165,14 +139,12 @@ class ProductoService:
                 principales = [c for c in data.categorias if c.es_principal]
                 if len(principales) > 1:
                     raise http_error(400, "Solo puede haber una categoría principal por producto", "BAD_REQUEST", "categorias")
-                old_cat_links = uow.productos.session.exec(
-                    select(ProductoCategoria).where(ProductoCategoria.producto_id == producto_id)
-                ).all()
+                old_cat_links = uow.productos.get_categoria_links(producto_id)
                 for link in old_cat_links:
-                    uow.productos.session.delete(link)
+                    uow.productos.delete(link)
 
                 for cat_data in data.categorias:
-                    cat = uow.productos.session.get(Categoria, cat_data.categoria_id)
+                    cat = uow.categorias.get_by_id(cat_data.categoria_id)
                     if not cat:
                         raise http_error(404, "Categoria no encontrada", "NOT_FOUND", "categoria_id")
                     link = ProductoCategoria(
@@ -180,16 +152,14 @@ class ProductoService:
                         categoria_id=cat_data.categoria_id,
                         es_principal=cat_data.es_principal,
                     )
-                    uow.productos.session.add(link)
+                    uow.productos.add(link)
 
             if data.ingredientes is not None:
-                old_ing_links = uow.productos.session.exec(
-                    select(ProductoIngrediente).where(ProductoIngrediente.producto_id == producto_id)
-                ).all()
+                old_ing_links = uow.productos.get_ingrediente_links(producto_id)
                 for link in old_ing_links:
-                    uow.productos.session.delete(link)
+                    uow.productos.delete(link)
                 for ing_data in data.ingredientes:
-                    ing = uow.productos.session.get(Ingrediente, ing_data.ingrediente_id)
+                    ing = uow.ingredientes.get_by_id(ing_data.ingrediente_id)
                     if not ing:
                         raise http_error(404, f"Ingrediente {ing_data.ingrediente_id} no encontrado", "NOT_FOUND", "ingrediente_id")
                     if ing_data.cantidad <= 0:
@@ -201,7 +171,7 @@ class ProductoService:
                         unidad_medida_id=ing_data.unidad_medida_id,
                         es_removible=ing_data.es_removible,
                     )
-                    uow.productos.session.add(link)
+                    uow.productos.add(link)
             uow.productos.add(producto)
             result = ProductoOut.model_validate(producto)
         return result
