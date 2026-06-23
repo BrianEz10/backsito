@@ -10,6 +10,7 @@ from app.modules.pagos.models import Pago
 from app.modules.pagos.schemas import PagoCrearResponse, PagoEstadoResponse
 from app.modules.pagos.uow import PagoUnitOfWork
 from app.core.errors import http_error
+from app.modules.pedidos.repository import PedidoRepository
 
 
 logger = logging.getLogger(__name__)
@@ -107,36 +108,35 @@ class PaymentService:
 
 
     def crear_pago(self, pedido_id: int, usuario_id: int) -> PagoCrearResponse:
-        
-        pedido = self._session.get(Pedido, pedido_id)
-
-        if not pedido:
-            raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
-
-        if pedido.usuario_id != usuario_id:
-            raise http_error(403, "No puedes pagar un pedido que no te pertenece", "FORBIDDEN")
-
-        if not self._get_mp_access_token():
-            raise http_error(400, "MercadoPago no configurado. Configure MP_ACCESS_TOKEN", "NOT_CONFIGURED")
-
-        base_url = settings.MP_NOTIFICATION_URL or "http://localhost:8000"
-        back_urls = {
-            "success": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/success",
-            "failure": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/failure",
-            "pending": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/pending",
-        }
-
-        try:
-            mp_data = self._crear_preferencia_mp(
-                monto=pedido.total,
-                titulo=f"Pedido #{pedido_id} - FoodStore",
-                pedido_id=pedido_id,
-                back_urls=back_urls,
-            )
-        except RuntimeError as e:
-            raise http_error(400, str(e), "NOT_CONFIGURED")
-
         with PagoUnitOfWork(self._session) as uow:
+            pedido = uow.pedidos.get_by_id(pedido_id)
+
+            if not pedido:
+                raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+
+            if pedido.usuario_id != usuario_id:
+                raise http_error(403, "No puedes pagar un pedido que no te pertenece", "FORBIDDEN")
+
+            if not self._get_mp_access_token():
+                raise http_error(400, "MercadoPago no configurado. Configure MP_ACCESS_TOKEN", "NOT_CONFIGURED")
+
+            base_url = settings.MP_NOTIFICATION_URL or "http://localhost:8000"
+            back_urls = {
+                "success": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/success",
+                "failure": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/failure",
+                "pending": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/pending",
+            }
+
+            try:
+                mp_data = self._crear_preferencia_mp(
+                    monto=pedido.total,
+                    titulo=f"Pedido #{pedido_id} - FoodStore",
+                    pedido_id=pedido_id,
+                    back_urls=back_urls,
+                )
+            except RuntimeError as e:
+                raise http_error(400, str(e), "NOT_CONFIGURED")
+
             pago = Pago(
                 pedido_id=pedido_id,
                 monto=pedido.total,
@@ -216,9 +216,7 @@ class PaymentService:
                 pago.updated_at = datetime.utcnow()
 
                 if nuevo_estado == "aprobado":
-                    pedido = self._session.exec(
-                        select(Pedido).where(Pedido.id == pago.pedido_id).with_for_update()
-                    ).first()
+                    pedido = uow.pedidos.lock_by_id(pago.pedido_id)
                     if pedido and pedido.estado_codigo == "PENDIENTE":
                         historial = HistorialEstadoPedido(
                             pedido_id=pedido.id,
@@ -228,7 +226,7 @@ class PaymentService:
                             motivo=None,
                         )
                         pedido.estado_codigo = "CONFIRMADO"
-                        self._session.add(historial)
+                        uow.pedidos.add_historial_entry(historial)
 
                         evento = {
                             "event": "PEDIDO_CONFIRMADO",
@@ -253,9 +251,7 @@ class PaymentService:
 
     async def confirmar_pago(self, pedido_id: int, payment_id: Optional[int] = None) -> PagoEstadoResponse:
 
-        pedido = self._session.exec(
-            select(Pedido).where(Pedido.id == pedido_id).with_for_update()
-        ).first()
+        pedido = PedidoRepository(self._session).lock_by_id(pedido_id)
 
         if not pedido:
             raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
@@ -305,7 +301,7 @@ class PaymentService:
                             motivo=None,
                         )
                         pedido.estado_codigo = "CONFIRMADO"
-                        self._session.add(historial)
+                        uow.pedidos.add_historial_entry(historial)
 
                         evento = {
                             "event": "PEDIDO_CONFIRMADO",
@@ -332,7 +328,7 @@ class PaymentService:
             if not pago:
                 raise http_error(404, "Pago no encontrado", "NOT_FOUND", "pedido_id")
 
-            pedido = self._session.get(Pedido, pago.pedido_id)
+            pedido = uow.pedidos.get_by_id(pago.pedido_id)
             is_admin = any(r in ("ADMIN",) for r in roles)
             if not is_admin and pedido and pedido.usuario_id != usuario_id:
                 raise http_error(404, "Pago no encontrado", "NOT_FOUND", "pedido_id")

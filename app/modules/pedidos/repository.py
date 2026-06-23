@@ -20,6 +20,13 @@ class PedidoRepository(BaseRepository[Pedido]):
         ).first()
     
 
+    def lock_by_id(self, id: int) -> Pedido | None:
+        return self.session.exec(
+            select(Pedido).where(Pedido.id == id, Pedido.deleted_at == None)
+            .with_for_update()
+        ).first()
+
+
     def get_by_usuario(self, usuario_id: int) -> list[Pedido]:
         return list(
             self.session.exec(
@@ -38,6 +45,7 @@ class PedidoRepository(BaseRepository[Pedido]):
             ).all()
         )
     
+
     def get_forma_pago(self, codigo: str) -> FormaPago | None:
         return self.session.get(FormaPago, codigo)
 
