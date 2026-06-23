@@ -7,7 +7,6 @@ from app.modules.usuarios.models import Usuario
 from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
 from app.modules.auth.uow import AuthUnitOfWork
 from app.modules.auth.refresh_models import RefreshToken
-from app.modules.roles.associations import UsuarioRol
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.config import settings
 from app.core.errors import http_error
@@ -28,7 +27,7 @@ class AuthService:
         token_str = secrets.token_urlsafe(32)
         token_hash = self._hash_token(token_str)
         obj = RefreshToken(usuario_id=usuario_id, token_hash=token_hash, expires_at= self._utcnow()  + timedelta(days=self._refresh_expire_days))
-        uow._session.add(obj)
+        uow.refresh_tokens.add(obj)
         return token_str
     
     def _set_auth_cookies(self, response: Response, access_token: str, refresh_token: str) -> None:
@@ -65,8 +64,7 @@ class AuthService:
                 hashed_password=hashed,
             )
             uow.usuarios.add(user)
-            link = UsuarioRol(usuario_id=user.id, rol_codigo="CLIENT")
-            uow._session.add(link)
+            uow.usuarios.add_rol_link(user.id, "CLIENT")
             refresh_token_str = self._create_refresh_token(uow, user.id)
             access_token = self.create_token(user)
         self._set_auth_cookies(response, access_token, refresh_token_str)
