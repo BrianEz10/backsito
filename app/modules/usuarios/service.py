@@ -28,20 +28,11 @@ class UsuarioService:
 
     def listar(self, page: int = 1, size: int = 20, rol: str | None = None) -> PaginatedUsuarios:
         with UsuarioUnitOfWork(self._session) as uow:
-            stmt = select(Usuario).where(Usuario.deleted_at == None)
-            if rol:
-                stmt = stmt.join(UsuarioRol, UsuarioRol.usuario_id == Usuario.id)
-                stmt = stmt.where(UsuarioRol.rol_codigo == rol)
-
-            total = uow._session.exec(
-                select(func.count()).select_from(stmt.subquery())
-            ).one()
-
-            stmt = stmt.offset((page - 1) * size).limit(size)
-            usuarios = uow._session.exec(stmt).all()
+            total = uow.usuarios.count_filtered(rol)
+            offset = (page - 1) * size
+            usuarios = uow.usuarios.find_all_filtered(rol, offset, size)
             result = [self._user_to_out(u) for u in usuarios]
             pages = (total + size - 1) // size
-
         return PaginatedUsuarios(items=result, total=total, page=page, size=size, pages=pages)
 
 
@@ -72,16 +63,14 @@ class UsuarioService:
             user = uow.usuarios.get_by_id(usuario_id)
             if not user or user.deleted_at is not None:
                 raise http_error(404, "Usuario no encontrado", "NOT_FOUND", "usuario_id")
-            old_links = uow._session.exec(
-                select(UsuarioRol).where(UsuarioRol.usuario_id == usuario_id)
-            ).all()
+            old_links = uow.usuarios.get_roles_links(usuario_id)
             for link in old_links:
-                uow._session.delete(link)
+                uow.usuarios.delete_rol_link(link)
             for rol_codigo in data.roles:
                 rol = uow.roles.get_by_id(rol_codigo)
                 if not rol:
                     raise http_error(400, f"Rol {rol_codigo} no existe", "NOT_FOUND", "roles")
-                uow._session.add(UsuarioRol(usuario_id=usuario_id, rol_codigo=rol_codigo))
+                uow.usuarios.add_rol_link(usuario_id, rol_codigo)
             result = self._user_to_out(user)
         return result
 
