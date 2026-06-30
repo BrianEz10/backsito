@@ -1,4 +1,4 @@
-from sqlmodel import Field, ForeignKey, Relationship, SQLModel, Column, Integer, ARRAY
+from sqlmodel import Field, ForeignKey, Relationship, SQLModel, Column, Integer, ARRAY, DateTime
 from app.core.base import Base
 from datetime import datetime, timezone
 
@@ -32,7 +32,10 @@ class DetallePedido(SQLModel, table=True):
     precio_snapshot: float = Field(ge=0, nullable=False)
     subtotal_snap: float = Field(nullable=False)
     personalizacion: list[int] | None = Field(sa_column=Column(ARRAY(Integer)))
-    created_at: datetime = Field(nullable=False, default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     pedido: Pedido = Relationship(back_populates="detalles")
 
@@ -46,6 +49,9 @@ class HistorialEstadoPedido(SQLModel, table=True):
     estado_hacia: str = Field(foreign_key="estados_pedido.codigo", nullable=False)
     usuario_id: int | None = Field(default=None, foreign_key="usuarios.id")
     motivo: str | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     pedido: Pedido = Relationship(back_populates="historial")

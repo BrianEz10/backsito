@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from sqlmodel import Relationship, SQLModel, Field
+from sqlmodel import Relationship, SQLModel, Field, Column, DateTime
 
 
 if TYPE_CHECKING:
@@ -18,7 +18,10 @@ class ProductoCategoria(SQLModel, table=True):
         default=None, foreign_key="categorias.id", primary_key=True
     )
     es_principal: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
 
 class ProductoIngrediente(SQLModel, table=True):
@@ -28,7 +31,10 @@ class ProductoIngrediente(SQLModel, table=True):
     ingrediente_id: int | None = Field(default=None, foreign_key="ingredientes.id", primary_key=True)
     cantidad: float = Field(default=0)
     unidad_medida_id: int = Field(default=None, foreign_key="unidad_medida.id")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
     es_removible: bool = Field(default=False)
     producto: "Producto" = Relationship(back_populates="producto_ingredientes")
     ingrediente: "Ingrediente" = Relationship(back_populates="producto_ingredientes")
