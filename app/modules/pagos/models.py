@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 from datetime import datetime, timezone
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Column, DateTime
 from sqlalchemy import BigInteger
 
 
@@ -28,5 +28,8 @@ class Pago(SQLModel, table=True):
     payment_method_id: Optional[str] = Field(default=None, max_length=50)
     
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))

@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Column, DateTime
 from datetime import datetime, timezone
 
 
@@ -13,4 +13,7 @@ class UsuarioRol(SQLModel, table=True):
     )
     asignado_por_id: int | None = Field(default=None, foreign_key="usuarios.id")
     expires_at: datetime | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
