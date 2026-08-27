@@ -36,14 +36,16 @@ class AuthService:
             value=access_token,
             httponly=True,
             max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            samesite="lax",
+            samesite="none",
+            secure=True,
         )
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
             max_age=self._refresh_expire_days * 24 * 60 * 60,
-            samesite="lax",
+            samesite="none",
+            secure=True,
         )
     
     def create_token(self, user: Usuario) -> str:
