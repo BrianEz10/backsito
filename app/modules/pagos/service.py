@@ -107,57 +107,57 @@ class PaymentService:
             raise RuntimeError(f"Error de conexión con MP: {str(e)}")
 
 
-def crear_pago(self, pedido_id: int, usuario_id: int) -> PagoCrearResponse:
-    with PagoUnitOfWork(self._session) as uow:
-        pedido = uow.pedidos.get_by_id(pedido_id)
-        if not pedido:
-            raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
-        if pedido.usuario_id != usuario_id:
-            raise http_error(403, "No puedes pagar un pedido que no te pertenece", "FORBIDDEN")
-        if not self._get_mp_access_token():
-            raise http_error(400, "MercadoPago no configurado. Configure MP_ACCESS_TOKEN", "NOT_CONFIGURED")
+    def crear_pago(self, pedido_id: int, usuario_id: int) -> PagoCrearResponse:
+        with PagoUnitOfWork(self._session) as uow:
+            pedido = uow.pedidos.get_by_id(pedido_id)
+            if not pedido:
+                raise http_error(404, "Pedido no encontrado", "NOT_FOUND", "pedido_id")
+            if pedido.usuario_id != usuario_id:
+                raise http_error(403, "No puedes pagar un pedido que no te pertenece", "FORBIDDEN")
+            if not self._get_mp_access_token():
+                raise http_error(400, "MercadoPago no configurado. Configure MP_ACCESS_TOKEN", "NOT_CONFIGURED")
 
-        base_url = settings.MP_NOTIFICATION_URL or "http://localhost:8000"
-        back_urls = {
-            "success": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/success",
-            "failure": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/failure",
-            "pending": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/pending",
-        }
-        try:
-            mp_data = self._crear_preferencia_mp(
-                monto=pedido.total,
-                titulo=f"Pedido #{pedido_id} - FoodStore",
-                pedido_id=pedido_id,
-                back_urls=back_urls,
+            base_url = settings.MP_NOTIFICATION_URL or "http://localhost:8000"
+            back_urls = {
+                "success": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/success",
+                "failure": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/failure",
+                "pending": f"{base_url}/api/v1/pagos/redirect/{pedido_id}/pending",
+            }
+            try:
+                mp_data = self._crear_preferencia_mp(
+                    monto=pedido.total,
+                    titulo=f"Pedido #{pedido_id} - FoodStore",
+                    pedido_id=pedido_id,
+                    back_urls=back_urls,
+                )
+            except RuntimeError as e:
+                raise http_error(400, str(e), "NOT_CONFIGURED")
+
+            pago = uow.pagos.get_ultimo_by_pedido(pedido_id)
+            if pago and pago.estado == "pendiente":
+                pago.mp_preference_id = mp_data["preference_id"]
+                pago.mp_init_point = mp_data.get("init_point")
+                pago.idempotency_key = str(uuid.uuid4())
+                pago.updated_at = datetime.now(timezone.utc)
+            else:
+                pago = Pago(
+                    pedido_id=pedido_id,
+                    monto=pedido.total,
+                    transaction_amount=pedido.total,
+                    external_reference=str(pedido.id),
+                    estado="pendiente",
+                    mp_preference_id=mp_data["preference_id"],
+                    mp_init_point=mp_data.get("init_point"),
+                    idempotency_key=str(uuid.uuid4()),
+                )
+                uow.pagos.add(pago)
+
+            return PagoCrearResponse(
+                pago_id=pago.id,
+                preference_id=mp_data["preference_id"],
+                init_point=mp_data.get("init_point"),
+                public_key=self._get_mp_public_key(),
             )
-        except RuntimeError as e:
-            raise http_error(400, str(e), "NOT_CONFIGURED")
-
-        pago = uow.pagos.get_ultimo_by_pedido(pedido_id)
-        if pago and pago.estado == "pendiente":
-            pago.mp_preference_id = mp_data["preference_id"]
-            pago.mp_init_point = mp_data.get("init_point")
-            pago.idempotency_key = str(uuid.uuid4())
-            pago.updated_at = datetime.now(timezone.utc)
-        else:
-            pago = Pago(
-                pedido_id=pedido_id,
-                monto=pedido.total,
-                transaction_amount=pedido.total,
-                external_reference=str(pedido.id),
-                estado="pendiente",
-                mp_preference_id=mp_data["preference_id"],
-                mp_init_point=mp_data.get("init_point"),
-                idempotency_key=str(uuid.uuid4()),
-            )
-            uow.pagos.add(pago)
-
-        return PagoCrearResponse(
-            pago_id=pago.id,
-            preference_id=mp_data["preference_id"],
-            init_point=mp_data.get("init_point"),
-            public_key=self._get_mp_public_key(),
-        )
 
     async def procesar_webhook(self, data: dict, query_params: Optional[dict] = None) -> dict:
 
